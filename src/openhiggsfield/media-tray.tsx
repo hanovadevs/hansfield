@@ -101,8 +101,8 @@ export function useMediaTray(
     } catch (caught) {
       onError(
         caught instanceof Error
-          ? `Upload failed — ${caught.message}. Check the Blob store is configured, then retry.`
-          : "Upload failed. Retry, or drop the file and generate from the prompt alone.",
+          ? caught.message
+          : "Upload failed. Please check your API key and retry.",
       );
     } finally {
       setUploading(false);

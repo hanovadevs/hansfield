@@ -104,8 +104,7 @@ graph TD
    Add your credentials to `.env`:
    ```env
    HF_API_BASE_URL=https://api.higgsfield.ai
-   HF_API_KEY=your_id:your_secret               # Optional server default (or enter via UI)
-   OPEN_HIGGSFIELD_READ_WRITE_TOKEN=            # Optional: Vercel Blob token for file uploads
+   HF_API_KEY=your_id:your_secret               # Platform key (or enter via UI)
    ```
 
 4. **Launch the development server:**

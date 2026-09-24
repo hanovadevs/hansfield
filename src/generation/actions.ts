@@ -59,7 +59,7 @@ export async function getGenerationStatuses(data: unknown): Promise<StatusResult
   );
 }
 
-async function readStoredCredentials() {
+export async function readStoredCredentials() {
   const jar = await cookies();
   const fromCookie = decodeCredentials(jar.get(PLATFORM_KEY_COOKIE)?.value);
   if (fromCookie) return fromCookie;
@@ -73,7 +73,7 @@ async function readStoredCredentials() {
   return null;
 }
 
-async function readCredentials() {
+export async function readCredentials() {
   const stored = await readStoredCredentials();
   if (!stored) throw new MissingCredentialsError();
   const baseUrl = process.env.HF_API_BASE_URL;

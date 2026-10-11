@@ -1,4 +1,5 @@
 import {
+  access,
   cp,
   readdir,
   readlink,
@@ -7,6 +8,8 @@ import {
   symlink,
   unlink,
 } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { constants } from "node:fs";
 import { resolve, relative, isAbsolute, dirname } from "node:path";
 
 export async function prepareStandalone() {
@@ -47,6 +50,15 @@ export async function prepareStandalone() {
   await cp(resolve(".next/static"), resolve(root, ".next/static"), {
     recursive: true,
   });
+  // Resolve from the package itself, not the workspace dependencies. This
+  // catches a missing traced runtime entry before a container can be shipped.
+  const runtimeRequire = createRequire(resolve(root, "package.json"));
+  const ffmpeg = runtimeRequire("ffmpeg-static");
+  const ffprobe = runtimeRequire("ffprobe-static");
+  await Promise.all([
+    access(ffmpeg, constants.X_OK),
+    access(ffprobe.path, constants.X_OK),
+  ]);
   console.log(
     "Standalone assets prepared; local environment and verification artifacts excluded.",
   );

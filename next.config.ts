@@ -7,12 +7,12 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   outputFileTracingIncludes: {
     "/api/film/process": [
-      "./node_modules/ffmpeg-static/ffmpeg*",
-      "./node_modules/ffprobe-static/bin/**",
+      "./node_modules/ffmpeg-static/**/*",
+      "./node_modules/ffprobe-static/**/*",
     ],
     "/api/health": [
-      "./node_modules/ffmpeg-static/ffmpeg*",
-      "./node_modules/ffprobe-static/bin/**",
+      "./node_modules/ffmpeg-static/**/*",
+      "./node_modules/ffprobe-static/**/*",
     ],
   },
   outputFileTracingExcludes: {

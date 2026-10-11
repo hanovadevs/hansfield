@@ -1,34 +1,90 @@
 import { getModel } from "./catalog";
 import type { GenerationPlane, PlatformPaths } from "./catalog/types";
+import { normalizeInput, schemaFor, toSnakeCase } from "./catalog/schema";
 
 type Mapped = { path: string; body: Record<string, unknown> };
 type Mapper = (plane: GenerationPlane) => Mapped;
 
 const MAP: Record<string, Mapper> = {
+  "cinema-4": mapCinema,
+  genjutsu: (plane) => ({
+    path: "higgsfield/genjutsu/motion-transfer/v1.0",
+    body: {
+      prompt: plane.prompt.text,
+      video_url: urls(plane, "video")[0],
+      image_urls: urls(plane, "reference"),
+      resolution: plane.settings.resolution,
+    },
+  }),
   "soul-cinema": (plane) => mapSoul(plane, "higgsfield-ai/soul/cinema"),
   "soul-2": (plane) => mapSoul(plane, "higgsfield-ai/soul/v2/standard"),
   "kling-3-turbo": mapKlingTurbo,
   "kling-3-std": (plane) => mapKling3(plane, "kling-video/v3.0/std"),
   "kling-3-pro": (plane) => mapKling3(plane, "kling-video/v3.0/pro"),
   "kling-3-4k": (plane) => mapKling3(plane, "kling-video/v3.0/4k"),
-  "kling-3-motion-std": (plane) => mapKlingMotion(plane, "kling-video/v3/motion-control/std"),
-  "kling-3-motion-pro": (plane) => mapKlingMotion(plane, "kling-video/v3/motion-control/pro"),
+  "kling-3-motion-std": (plane) =>
+    mapKlingMotion(plane, "kling-video/v3/motion-control/std"),
+  "kling-3-motion-pro": (plane) =>
+    mapKlingMotion(plane, "kling-video/v3/motion-control/pro"),
   "seedance-2": (plane) => mapSeedance(plane, "bytedance/seedance-2.0"),
-  "seedance-2-fast": (plane) => mapSeedance(plane, "bytedance/seedance-2.0/fast"),
-  "seedance-2-mini": (plane) => mapSeedance(plane, "bytedance/seedance-2.0/mini"),
+  "seedance-2-fast": (plane) =>
+    mapSeedance(plane, "bytedance/seedance-2.0/fast"),
+  "seedance-2-mini": (plane) =>
+    mapSeedance(plane, "bytedance/seedance-2.0/mini"),
   "seedance-2.5": (plane) => mapSeedance(plane, "bytedance/seedance-2.5"),
-  "seedance-2.5-edit": (plane) => mapSeedanceSource(plane, "bytedance/seedance-2.5/video-edit", false),
-  "seedance-2.5-extend": (plane) => mapSeedanceSource(plane, "bytedance/seedance-2.5/video-extend", true),
+  "seedance-2.5-edit": (plane) =>
+    mapSeedanceSource(plane, "bytedance/seedance-2.5/video-edit", false),
+  "seedance-2.5-extend": (plane) =>
+    mapSeedanceSource(plane, "bytedance/seedance-2.5/video-extend", true),
 };
+
+function mapCinema(plane: GenerationPlane): Mapped {
+  const body: Record<string, unknown> = { prompt: plane.prompt.text };
+  for (const [key, value] of Object.entries(plane.settings)) {
+    if (value !== "" && value !== undefined)
+      body[key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)] = value;
+  }
+  for (const [role, key] of [
+    ["reference", "image_urls"],
+    ["video", "video_urls"],
+    ["audio", "audio_urls"],
+  ] as const) {
+    const items = urls(plane, role);
+    if (items.length) body[key] = items;
+  }
+  return { path: "higgsfield/cinema-studio/4.0", body };
+}
 
 export function toPlatform(plane: GenerationPlane): Mapped {
   const model = getModel(plane.model);
-  const map = MAP[model.id] ?? (model.paths ? (next) => mapByPaths(next, model.paths!) : undefined);
+  const map =
+    MAP[model.id] ??
+    (model.paths ? (next) => mapByPaths(next, model.paths!) : undefined);
   if (!map) throw new Error(`No platform map for ${plane.model}`);
-  return map(plane);
+  const mapped = map(plane);
+  const body = normalizeInput(mapped.path, mapped.body);
+  const used = new Set(
+    Object.values(body).flatMap((value) =>
+      typeof value === "string"
+        ? [value]
+        : Array.isArray(value)
+          ? value.filter((v): v is string => typeof v === "string")
+          : [],
+    ),
+  );
+  for (const items of Object.values(plane.media))
+    for (const item of items)
+      if (!used.has(item.url))
+        throw new Error(
+          `The selected input mode cannot use your ${item.role} reference. Use frames or reference media in separate runs.`,
+        );
+  return { path: mapped.path, body };
 }
 
-function urls(plane: GenerationPlane, role: "start" | "end" | "reference" | "video" | "audio") {
+function urls(
+  plane: GenerationPlane,
+  role: "start" | "end" | "reference" | "video" | "audio",
+) {
   return (plane.media[role] ?? []).map((item) => item.url);
 }
 
@@ -55,7 +111,9 @@ function mapKlingTurbo(plane: GenerationPlane): Mapped {
       prompt: plane.prompt.text,
       duration: plane.settings.duration,
       resolution: plane.settings.resolution,
-      ...(start ? { image_url: start } : { aspect_ratio: plane.settings.aspectRatio }),
+      ...(start
+        ? { image_url: start }
+        : { aspect_ratio: plane.settings.aspectRatio }),
     },
   };
 }
@@ -101,10 +159,12 @@ function mapByPaths(plane: GenerationPlane, spec: PlatformPaths): Mapped {
   const videos = urls(plane, "video");
   const body: Record<string, unknown> = {
     prompt: plane.prompt.text,
-    ...(plane.settings.aspectRatio ? { aspect_ratio: plane.settings.aspectRatio } : {}),
-    ...(plane.settings.resolution ? { resolution: plane.settings.resolution } : {}),
-    ...(typeof plane.settings.duration === "number" ? { duration: plane.settings.duration } : {}),
+    ...(start ? { image_url: start } : {}),
   };
+  for (const [key, value] of Object.entries(plane.settings))
+    body[toSnakeCase(key)] = value;
+  const audio = urls(plane, "audio");
+  if (audio.length) body.audio_url = audio[0];
   if (spec.firstLast && (start || end)) {
     return {
       path: spec.firstLast,
@@ -118,23 +178,43 @@ function mapByPaths(plane: GenerationPlane, spec: PlatformPaths): Mapped {
   if (spec.image && start) {
     return {
       path: spec.image,
-      body: { ...body, image_url: start, ...(end ? { last_image_url: end } : {}) },
+      body: {
+        ...body,
+        image_url: start,
+        ...(end
+          ? {
+              [schemaFor(spec.image)?.properties.end_image_url
+                ? "end_image_url"
+                : "last_image_url"]: end,
+            }
+          : {}),
+      },
     };
   }
-  if (spec.reference && (refs.length || videos.length)) {
+  if (
+    spec.reference &&
+    (refs.length ||
+      videos.length ||
+      (audio.length && schemaFor(spec.reference)?.properties.audio_urls))
+  ) {
     return {
       path: spec.reference,
       body: {
         ...body,
         ...(refs.length ? { image_urls: refs } : {}),
         ...(videos.length ? { video_urls: videos } : {}),
+        ...(audio.length ? { audio_urls: audio } : {}),
       },
     };
   }
   if (spec.text) {
     return {
       path: spec.text,
-      body: refs.length ? { ...body, image_urls: refs } : body,
+      body: {
+        ...body,
+        ...(start ? { image_url: start } : {}),
+        ...(refs.length ? { image_urls: refs } : {}),
+      },
     };
   }
   if (spec.image) return { path: spec.image, body };
@@ -148,8 +228,13 @@ function seedanceBody(plane: GenerationPlane, withDuration: boolean) {
     prompt: plane.prompt.text,
     resolution: plane.settings.resolution,
     generate_audio: plane.settings.generateAudio,
+    ...(plane.settings.bitrateMode
+      ? { bitrate_mode: plane.settings.bitrateMode }
+      : {}),
     ...(withDuration ? { duration: plane.settings.duration } : {}),
-    ...(plane.settings.outputFormat ? { output_format: plane.settings.outputFormat } : {}),
+    ...(plane.settings.outputFormat
+      ? { output_format: plane.settings.outputFormat }
+      : {}),
   };
 }
 
@@ -163,7 +248,11 @@ function mapSeedance(plane: GenerationPlane, prefix: string): Mapped {
   if (start) {
     return {
       path: `${prefix}/image-to-video`,
-      body: { ...shared, image_url: start, ...(end ? { end_image_url: end } : {}) },
+      body: {
+        ...shared,
+        image_url: start,
+        ...(end ? { end_image_url: end } : {}),
+      },
     };
   }
   if (refs.length || videos.length || audios.length) {
@@ -184,7 +273,11 @@ function mapSeedance(plane: GenerationPlane, prefix: string): Mapped {
   };
 }
 
-function mapSeedanceSource(plane: GenerationPlane, path: string, withDuration: boolean): Mapped {
+function mapSeedanceSource(
+  plane: GenerationPlane,
+  path: string,
+  withDuration: boolean,
+): Mapped {
   const [video, ...extraVideos] = urls(plane, "video");
   const refs = urls(plane, "reference");
   const audios = urls(plane, "audio");

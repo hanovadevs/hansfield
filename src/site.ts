@@ -3,27 +3,30 @@
    browser, so importing SITE_URL into a client component would resolve
    differently on each side. Keep this module out of "use client" files. */
 
+import { BRAND_NAME, BRAND_DESCRIPTOR } from "./brand";
+
 function resolveOrigin(): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (explicit) return explicit.replace(/\/+$/, "");
 
   const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
-  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`;
+  if (vercel)
+    return `https://${vercel.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`;
 
   return "http://localhost:3000";
 }
 
 export const SITE_URL = resolveOrigin();
 
-export const SITE_NAME = "Hansfield";
-export const SITE_DESCRIPTOR = "AI Studio";
+export const SITE_NAME = BRAND_NAME;
+export const SITE_DESCRIPTOR = BRAND_DESCRIPTOR;
 export const SITE_TITLE = `${SITE_NAME} — ${SITE_DESCRIPTOR}`;
 
 export const SITE_DESCRIPTION =
-  "Minimalist studio for multi-model AI image and video generation — one prompt bar, native model settings, and unified media canvas.";
+  "Create connected shots, shape your story, and export a complete film. An independent filmmaking studio using your own Higgsfield API account.";
 
 /** Clean studio ground; also the installed-app and browser-chrome color. */
-export const STUDIO_BG = "#f6f7f9";
+export const STUDIO_BG = "#f5f4ef";
 
 /* The card built by scripts/build-brand-assets.mjs. It lives in public/ rather
    than as an app/opengraph-image file on purpose: the file convention outranks
@@ -36,7 +39,7 @@ export const OG_IMAGE = {
   width: 1200,
   height: 630,
   type: "image/png",
-  alt: "The OpenHiggsfield AI open-frame mark on a near-black field, above the OpenHiggsfield AI wordmark, the words Open source AI studio, and a line describing one prompt bar for image and video with every finished run in one gallery.",
+  alt: "Jenera Film Studio: connected shots, one story. A forest-green J ribbon mark on an ivory field.",
 };
 
 /* Next replaces the whole `openGraph` (and `twitter`) object when a route

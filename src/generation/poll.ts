@@ -1,48 +1,48 @@
-import { getGenerationStatuses } from "./actions";
+import { getGenerationStatuses } from "./client";
 import type { GenerationStatus, StatusResult } from "./platform";
 
-/** Statuses the platform never moves off again. */
 const TERMINAL = new Set(["completed", "failed", "nsfw", "canceled"]);
-
-export const POLL_INTERVAL_MS = 4000;
-export const POLL_DEADLINE_MS = 10 * 60_000;
-/** Rounds allowed to fail back to back before the watches are given up on. One
-    dropped round must not end every generation in flight. */
-const MAX_MISSES = 3;
-
+export const POLL_INTERVAL_MS = 2000;
+export const POLL_DEADLINE_MS = 30 * 60_000;
 type Waiter = {
   deadline: number;
+  statusUrl?: string;
+  misses: number;
+  onProgress?: (status: string) => void;
   resolve: (status: GenerationStatus) => void;
   reject: (reason: Error) => void;
 };
-
 const waiting = new Map<string, Waiter>();
 const inflight = new Map<string, Promise<GenerationStatus>>();
 let timer: ReturnType<typeof setTimeout> | null = null;
 let polling = false;
-let misses = 0;
+let delay = POLL_INTERVAL_MS;
+let epoch = 0;
 
-/** Resolves when the platform reports a terminal status for this request.
-    Every request in flight is asked for together, in one server action per
-    interval: Next dispatches server actions one at a time per client, so a
-    poll per run would queue ahead of the next submit and the composer would
-    stall again — with the lock gone and the queue doing the same work. */
 export function watchRequest(
   requestId: string,
-  opts?: { deadline?: number },
+  opts?: {
+    deadline?: number;
+    statusUrl?: string;
+    onProgress?: (status: string) => void;
+  },
 ): Promise<GenerationStatus> {
   const existing = inflight.get(requestId);
   if (existing) return existing;
+  delay = POLL_INTERVAL_MS;
   const promise = new Promise<GenerationStatus>((resolve, reject) => {
     waiting.set(requestId, {
       deadline: opts?.deadline ?? Date.now() + POLL_DEADLINE_MS,
+      statusUrl: opts?.statusUrl,
+      misses: 0,
+      onProgress: opts?.onProgress,
       resolve: (status) => {
         inflight.delete(requestId);
         resolve(status);
       },
-      reject: (reason) => {
+      reject: (error) => {
         inflight.delete(requestId);
-        reject(reason);
+        reject(error);
       },
     });
     schedule();
@@ -51,66 +51,78 @@ export function watchRequest(
   return promise;
 }
 
-/** Drops every watch without settling it: the studio unmounted and there is
-    nobody left to hand a result to. In-flight jobs stay in history and the
-    next mount starts a fresh watch. */
 export function stopWatching(): void {
+  epoch++;
   if (timer !== null) clearTimeout(timer);
   timer = null;
-  misses = 0;
+  const waiters = [...waiting.values()];
   waiting.clear();
   inflight.clear();
+  delay = POLL_INTERVAL_MS;
+  for (const waiter of waiters) waiter.reject(new Error("Watching stopped"));
 }
-
-function schedule(): void {
-  if (timer !== null || polling || waiting.size === 0) return;
-  timer = setTimeout(() => void round(), POLL_INTERVAL_MS);
+function schedule() {
+  if (timer !== null || polling || !waiting.size) return;
+  timer = setTimeout(() => void round(), delay + Math.random() * 300);
 }
-
-async function round(): Promise<void> {
+async function round() {
   timer = null;
   polling = true;
+  const generation = epoch;
+  const entries = [...waiting].slice(0, 50);
   try {
-    const results = await getGenerationStatuses({ requestIds: [...waiting.keys()] });
-    misses = 0;
+    const results = await getGenerationStatuses(
+      entries.map(([requestId, waiter]) => ({
+        requestId,
+        statusUrl: waiter.statusUrl,
+      })),
+    );
+    if (generation !== epoch) return;
     for (const result of results) deliver(result);
-    sweep();
-  } catch (caught) {
-    if (++misses < MAX_MISSES) return;
-    settleAll(caught instanceof Error ? caught : new Error(String(caught)));
+    for (const [id, waiter] of entries) {
+      if (waiting.get(id) === waiter) {
+        waiting.delete(id);
+        waiting.set(id, waiter);
+      }
+    }
+  } catch (error) {
+    if (generation !== epoch) return;
+    for (const [requestId] of entries)
+      deliver({
+        requestId,
+        error:
+          error instanceof Error ? error.message : "Connection interrupted",
+        retryable: true,
+      });
   } finally {
     polling = false;
+    if (generation === epoch) {
+      for (const [requestId, waiter] of waiting) {
+        if (Date.now() <= waiter.deadline) continue;
+        waiting.delete(requestId);
+        waiter.reject(
+          new Error(
+            "Status check timed out. The job may still be running; resume tracking to check it.",
+          ),
+        );
+      }
+      delay = Math.min(delay * 1.35, 10000);
+    }
     schedule();
   }
 }
-
-function deliver(result: StatusResult): void {
+function deliver(result: StatusResult) {
   const waiter = waiting.get(result.requestId);
   if (!waiter) return;
   if ("error" in result) {
+    if (result.retryable && ++waiter.misses < 6) return;
     waiting.delete(result.requestId);
     waiter.reject(new Error(result.error));
     return;
   }
+  waiter.misses = 0;
+  waiter.onProgress?.(result.status.status);
   if (!TERMINAL.has(result.status.status)) return;
   waiting.delete(result.requestId);
   waiter.resolve(result.status);
-}
-
-/* A run the platform never finishes would otherwise hold its skeleton open for
-   the rest of the session. */
-function sweep(): void {
-  const now = Date.now();
-  for (const [requestId, waiter] of [...waiting]) {
-    if (now <= waiter.deadline) continue;
-    waiting.delete(requestId);
-    waiter.reject(new Error("timed out waiting for the platform"));
-  }
-}
-
-function settleAll(reason: Error): void {
-  const waiters = [...waiting.values()];
-  waiting.clear();
-  misses = 0;
-  for (const waiter of waiters) waiter.reject(reason);
 }

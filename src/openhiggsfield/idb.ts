@@ -38,15 +38,27 @@ function open(): Promise<IDBDatabase> {
   });
 }
 
-function request<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+function request<T>(
+  mode: IDBTransactionMode,
+  run: (store: IDBObjectStore) => IDBRequest<T>,
+): Promise<T> {
   return open().then(
     (db) =>
       new Promise<T>((resolve, reject) => {
         const tx = db.transaction(STORE, mode);
         const req = run(tx.objectStore(STORE));
-        tx.oncomplete = () => resolve(req.result);
-        tx.onabort = () => reject(tx.error ?? req.error);
-        tx.onerror = () => reject(tx.error ?? req.error);
+        tx.oncomplete = () => {
+          db.close();
+          resolve(req.result);
+        };
+        tx.onabort = () => {
+          db.close();
+          reject(tx.error ?? req.error);
+        };
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error ?? req.error);
+        };
       }),
   );
 }
@@ -54,7 +66,9 @@ function request<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => ID
 export function idbKv(): Kv {
   return {
     get<T>(key: string) {
-      return request("readonly", (store) => store.get(key)) as Promise<T | undefined>;
+      return request("readonly", (store) => store.get(key)) as Promise<
+        T | undefined
+      >;
     },
     async set(key, value) {
       await request("readwrite", (store) => store.put(value, key));

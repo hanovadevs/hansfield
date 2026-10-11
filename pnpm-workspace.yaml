@@ -1,8 +1,10 @@
 allowBuilds:
   esbuild: true
+  ffmpeg-static: true
   lightningcss: true
 onlyBuiltDependencies:
   - esbuild
+  - ffmpeg-static
   - sharp
 # The committed lockfile pins these official packages at versions published
 # hours before pnpm's minimum-release-age cutoff; exempt just those names.

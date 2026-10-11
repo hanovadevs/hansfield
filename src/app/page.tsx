@@ -2,8 +2,12 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
 import { OpenHiggsfieldApp } from "@/openhiggsfield/openhiggsfield-app";
+import { hasPlatformCredentials } from "@/generation/actions";
 
 import "@/openhiggsfield/openhiggsfield.css";
+import "@/openhiggsfield/studio.css";
+import "@/openhiggsfield/film.css";
+import "@/openhiggsfield/experience.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,6 +21,12 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-export default function OpenHiggsfieldPage() {
-  return <OpenHiggsfieldApp fontClassName={inter.variable} />;
+export default async function OpenHiggsfieldPage() {
+  const keyConfigured = await hasPlatformCredentials();
+  return (
+    <OpenHiggsfieldApp
+      fontClassName={inter.variable}
+      initialKeyConfigured={keyConfigured}
+    />
+  );
 }

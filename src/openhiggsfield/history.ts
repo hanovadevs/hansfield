@@ -1,7 +1,7 @@
 import { browserLegacy, defaultKv, type Kv, type LegacyStore } from "./idb";
 import type { Surface } from "@/generation/catalog";
 
-export type RunStatus = "running" | "completed" | "failed";
+export type RunStatus = "running" | "completed" | "failed" | "interrupted";
 
 export interface RunRecord {
   id: string;
@@ -19,6 +19,13 @@ export interface RunRecord {
   /** Platform request this row is waiting on. Set while status is running so a
       refresh can resume the poll; completed rows keep it for the same id. */
   requestId?: string;
+  statusUrl?: string;
+  phase?: string;
+  media?: import("@/generation/catalog").GenerationPlane["media"];
+  submission?: {
+    plane: import("@/generation/catalog").GenerationPlane;
+    idempotencyKey: string;
+  };
   error?: string;
   /** Layered-gradient fallback used while media loads or when a run failed. */
   art: string;
@@ -28,6 +35,7 @@ export interface RunRecord {
   /** Resolved catalog settings this run was submitted with, so reuse can
       restore the dials and not just the words. Absent on pre-existing records. */
   settings?: Record<string, unknown>;
+  filmShotId?: string;
 }
 
 export const HISTORY_KEY = "history.v1";
@@ -51,13 +59,16 @@ export async function saveHistory(
   legacy: LegacyStore | undefined = browserLegacy(),
 ): Promise<void> {
   const next = capHistory(records.filter(isRunRecord));
+  let saved = false;
   try {
     await kv.set(HISTORY_KEY, next);
+    saved = true;
   } catch {
     /* private mode or a denied store */
   }
   try {
-    legacy?.setItem(LEGACY_HISTORY_KEY, JSON.stringify(next));
+    if (saved) legacy?.removeItem(LEGACY_HISTORY_KEY);
+    else legacy?.setItem(LEGACY_HISTORY_KEY, JSON.stringify(next));
   } catch {
     /* quota or a denied store */
   }
@@ -65,13 +76,18 @@ export async function saveHistory(
 
 /** Session rows win on id collision so a generate that landed before IDB
     finished reading is not wiped by the delayed load. */
-export function mergeHistory(stored: RunRecord[], live: RunRecord[]): RunRecord[] {
+export function mergeHistory(
+  stored: RunRecord[],
+  live: RunRecord[],
+): RunRecord[] {
   const byId = new Map<string, RunRecord>();
   for (const row of [...stored, ...live]) {
     const prev = byId.get(row.id);
     if (!prev || newerRecord(row, prev)) byId.set(row.id, row);
   }
-  return capHistory([...byId.values()].sort((a, b) => b.createdAt - a.createdAt));
+  return capHistory(
+    [...byId.values()].sort((a, b) => b.createdAt - a.createdAt),
+  );
 }
 
 async function readIdb(kv: Kv): Promise<RunRecord[]> {
@@ -99,11 +115,18 @@ function readLegacy(legacy: LegacyStore | undefined): RunRecord[] {
 
 /* The cap trims the run log, not the visitor's shelf: a favorite is a
    deliberate keep, so only unmarked runs age out of the window. */
-export function capHistory(records: RunRecord[], max = MAX_RECORDS): RunRecord[] {
+export function capHistory(
+  records: RunRecord[],
+  max = MAX_RECORDS,
+): RunRecord[] {
   if (records.length <= max) return records;
   let kept = 0;
   return records.filter(
-    (record) => record.favorite === true || record.status === "running" || kept++ < max,
+    (record) =>
+      record.favorite === true ||
+      record.status === "running" ||
+      record.status === "interrupted" ||
+      kept++ < max,
   );
 }
 
@@ -118,13 +141,23 @@ export function replaceRequest(
   requestId: string,
   next: RunRecord[],
 ): RunRecord[] {
-  if (!records.some((record) => record.status === "running" && requestIdOf(record) === requestId)) {
+  if (
+    !records.some(
+      (record) =>
+        (record.status === "running" || record.status === "interrupted") &&
+        requestIdOf(record) === requestId,
+    )
+  ) {
     return records;
   }
   return capHistory(
-    [...next, ...records.filter((record) => requestIdOf(record) !== requestId)].sort(
-      (a, b) => b.createdAt - a.createdAt,
-    ),
+    [
+      ...next.map((record) => {
+        const previous = records.find((row) => row.id === record.id);
+        return previous?.favorite ? { ...record, favorite: true } : record;
+      }),
+      ...records.filter((record) => requestIdOf(record) !== requestId),
+    ].sort((a, b) => b.createdAt - a.createdAt),
   );
 }
 
@@ -146,8 +179,10 @@ function isRunRecord(value: unknown): value is RunRecord {
     Array.isArray(record.urls) &&
     (record.status === "completed" ||
       record.status === "failed" ||
+      record.status === "interrupted" ||
       (record.status === "running" && typeof record.requestId === "string")) &&
     typeof record.createdAt === "number" &&
+    Number.isFinite(record.createdAt) &&
     (record.requestId === undefined || typeof record.requestId === "string") &&
     (record.favorite === undefined || typeof record.favorite === "boolean") &&
     (record.settings === undefined ||
@@ -169,7 +204,11 @@ export function timeAgo(timestamp: number, now = Date.now()): string {
 /* One step along the runs the visitor is actually looking at, or null at the
    ends — the walk stops there rather than wrapping, so the edge of the scope
    can be felt. A run that has left the list steps nowhere. */
-export function stepRun(records: RunRecord[], id: string, delta: number): RunRecord | null {
+export function stepRun(
+  records: RunRecord[],
+  id: string,
+  delta: number,
+): RunRecord | null {
   const from = records.findIndex((record) => record.id === id);
   if (from < 0) return null;
   return records[from + delta] ?? null;

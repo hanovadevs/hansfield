@@ -8,7 +8,12 @@ export type MediaItem = {
 };
 
 export type SettingField =
-  | { type: "enum"; values: readonly string[]; default: string }
+  | {
+      type: "enum";
+      values: readonly string[];
+      default: string;
+      optional?: boolean;
+    }
   | { type: "range"; min: number; max: number; default: number; step?: number }
   | { type: "boolean"; default: boolean };
 
@@ -25,6 +30,7 @@ export type ModelEntry = {
   label: string;
   roles: Partial<Record<MediaRole, number>>;
   settings: Record<string, SettingField>;
+  requiredRoles?: MediaRole[];
   /** Submit paths when the shared mapper is enough. Soul, Kling 3, and Seedance keep custom maps. */
   paths?: PlatformPaths;
 };

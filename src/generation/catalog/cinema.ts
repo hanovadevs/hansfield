@@ -1,0 +1,111 @@
+import type { ModelEntry, SettingField } from "./types";
+
+function creative(values: string[]): SettingField {
+  return { type: "enum", values, default: "", optional: true };
+}
+
+// Verified against the model-specific Higgsfield reference, 2026-10-09.
+export const cinema4: ModelEntry = {
+  id: "cinema-4",
+  label: "Cinema Studio 4.0",
+  surface: "video",
+  roles: { reference: 30, video: 10, audio: 10 },
+  settings: {
+    aspectRatio: {
+      type: "enum",
+      values: ["16:9", "4:3", "1:1", "3:4", "9:16", "21:9"],
+      default: "16:9",
+    },
+    duration: { type: "range", min: 4, max: 30, default: 5 },
+    resolution: { type: "enum", values: ["480p", "720p"], default: "720p" },
+    generateAudio: { type: "boolean", default: true },
+    cameraMovement: creative([
+      "static-shot",
+      "dolly-in",
+      "dolly-out",
+      "tracking",
+      "side-tracking",
+      "drone-orbit",
+      "aerial-pullback",
+      "handheld",
+      "pan-left",
+      "pan-right",
+      "tilt-up",
+      "tilt-down",
+      "crane-up",
+      "crane-down",
+      "rack-focus",
+      "dolly-zoom",
+      "slow-zoom-in",
+      "slow-zoom-out",
+      "arc-left",
+      "arc-right",
+      "snorricam",
+      "robot-arm",
+      "pov",
+      "pedestal-up",
+      "pedestal-down",
+      "bullet-time",
+      "whip-pan",
+      "truck-right",
+      "truck-left",
+      "slider-right",
+      "slider-left",
+      "crush-zoom",
+      "helicopter-shot",
+    ]),
+    cameraLens: creative([
+      "clean-sharp",
+      "anamorphic",
+      "vintage-anamorphic",
+      "warm-vintage",
+      "halation-vintage",
+    ]),
+    cameraModel: creative(["modern", "35mm-film", "8mm-film", "dv-camcorder"]),
+    cameraAperture: creative([
+      "f14-wide-open",
+      "f4-moderate",
+      "f11-deep-focus",
+    ]),
+    light: creative([
+      "silhouette",
+      "practicals",
+      "window",
+      "overhead-fall",
+      "contre-jour",
+      "soft-cross",
+    ]),
+    pacing: creative(["chaotic", "dynamic", "calm", "single-shot"]),
+    genre: creative(["epic", "drama", "noir", "comedy", "horror", "action"]),
+    era: creative(["1960s", "1980s", "1990s", "2000s", "2020s"]),
+    colorPalette: creative([
+      "twilight-fable",
+      "oil-ochre",
+      "neon-rain-at-midnight",
+      "the-morning-after-rain",
+      "turquoise-mirage",
+      "industrial-fog",
+      "pink-velvet",
+      "amber-wasteland",
+      "gasoline-sunset",
+      "bioluminescent-night",
+      "runaway-summer",
+      "static-noon",
+    ]),
+  },
+};
+
+export const genjutsu: ModelEntry = {
+  id: "genjutsu",
+  label: "Genjutsu Motion Transfer",
+  surface: "video",
+  roles: { video: 1, reference: 8 },
+  requiredRoles: ["video", "reference"],
+  settings: {
+    resolution: {
+      type: "enum",
+      values: ["480p", "720p", "1080p"],
+      default: "720p",
+    },
+  },
+};

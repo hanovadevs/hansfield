@@ -1,6 +1,7 @@
 node_modules
 .DS_Store
 .next
+.next-test
 out
 dist
 *.local
@@ -9,3 +10,6 @@ dist
 .vercel
 tsconfig.tsbuildinfo
 .idea
+artifacts/
+test-results/
+playwright-report/

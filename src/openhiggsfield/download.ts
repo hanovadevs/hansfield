@@ -7,7 +7,10 @@ import type { RunRecord } from "./history";
    rather than papered over with a new tab the popup blocker would eat. */
 export async function saveFile(url: string, name: string): Promise<boolean> {
   try {
-    const response = await fetch(url, { mode: "cors" });
+    const response = await fetch(url, {
+      mode: "cors",
+      signal: AbortSignal.timeout(60000),
+    });
     if (!response.ok) return false;
     const href = URL.createObjectURL(await response.blob());
     const link = document.createElement("a");
@@ -35,5 +38,5 @@ export function fileNameFor(record: RunRecord, index: number): string {
       .replace(/^-+|-+$/g, "")
       .slice(0, 44)
       .replace(/-+$/, "") || "run";
-  return `openhiggsfield-${slug}-${index + 1}.${ext ?? (record.kind === "video" ? "mp4" : "png")}`;
+  return `jenera-${slug}-${index + 1}.${ext ?? (record.kind === "video" ? "mp4" : "png")}`;
 }

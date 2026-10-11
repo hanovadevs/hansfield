@@ -7,9 +7,22 @@ import type { MediaItem, MediaRole, ModelEntry } from "@/generation/catalog";
 import { useImageMedia, useVideoMedia } from "@/generation/stores/media";
 import { uploadMedia } from "@/generation/upload";
 
-import { ROLE_ACCEPT, ROLE_LABELS, ROLE_TAGS, rolesOf } from "./data";
+import {
+  ROLE_ACCEPT,
+  ROLE_KINDS,
+  ROLE_LABELS,
+  ROLE_TAGS,
+  rolesOf,
+} from "./data";
 import { AudioIcon, CloseIcon, VideoIcon } from "./icons";
-import { kindOfFile, loadUploads, mergeUploads, rememberUpload, saveUploads, type UploadRecord } from "./uploads";
+import {
+  kindOfFile,
+  loadUploads,
+  mergeUploads,
+  rememberUpload,
+  saveUploads,
+  type UploadRecord,
+} from "./uploads";
 
 function useMedia(model: ModelEntry) {
   const imageMedia = useImageMedia();
@@ -78,13 +91,20 @@ export function useMediaTray(
   for (const role of roles) {
     counts[role] = media.items.filter((item) => item.role === role).length;
   }
-  const allFull = roles.length > 0 && roles.every((role) => counts[role]! >= (model.roles[role] ?? 0));
+  const allFull =
+    roles.length > 0 &&
+    roles.every((role) => counts[role]! >= (model.roles[role] ?? 0));
 
   async function onFile(file: File | undefined) {
     if (!file) return;
     onError(null);
     setUploading(true);
     try {
+      const role = roleRef.current;
+      if (kindOfFile(file) !== ROLE_KINDS[role])
+        throw new Error(
+          `Choose an ${ROLE_KINDS[role]} file for ${ROLE_LABELS[role].toLowerCase()}.`,
+        );
       const uploaded = await uploadMedia(file);
       /* The file outlives this run: it joins the shelf the picker offers, so a
          reference used once can be reached again without a second upload. */
@@ -148,7 +168,17 @@ export function useMediaTray(
     }
   }
 
-  return { roles, items: media.items, uploads, staged, uploading, allFull, input, begin, apply };
+  return {
+    roles,
+    items: media.items,
+    uploads,
+    staged,
+    uploading,
+    allFull,
+    input,
+    begin,
+    apply,
+  };
 }
 
 /** Attached inputs, above the prompt — the frames read before the words do. */
@@ -164,7 +194,11 @@ export function MediaStrip({ model }: { model: ModelEntry }) {
           <span className="ohf-strip-tile">
             {item.role === "audio" || item.role === "video" ? (
               <span className="ohf-strip-glyph">
-                {item.role === "audio" ? <AudioIcon size={20} /> : <VideoIcon size={20} />}
+                {item.role === "audio" ? (
+                  <AudioIcon size={20} />
+                ) : (
+                  <VideoIcon size={20} />
+                )}
               </span>
             ) : (
               /* Blob-hosted user upload; next/image would proxy an arbitrary

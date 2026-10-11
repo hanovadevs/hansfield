@@ -1,32 +1,65 @@
 import { NextResponse } from "next/server";
 
-import { readStoredCredentials } from "@/generation/actions";
+import { readCredentials } from "@/generation/server-credentials";
+import {
+  acquireUpload,
+  guardOrigin,
+  limitCustomer,
+  readBoundedBody,
+} from "@/server/request-guard";
+import { routeError } from "@/server/route-error";
 import { toAuthorizationHeader } from "@/generation/credentials";
+import {
+  MAX_UPLOAD_BYTES,
+  validateMediaFile,
+} from "@/generation/media-validation";
 
 export const maxDuration = 60; // Allow sufficient time for larger uploads
 
-export async function POST(request: Request): Promise<NextResponse> {
+export async function POST(request: Request): Promise<Response> {
+  let release: (() => void) | undefined;
   try {
-    const formData = await request.formData();
+    guardOrigin(request);
+    if (
+      Number(request.headers.get("content-length")) >
+      MAX_UPLOAD_BYTES + 1024 * 1024
+    )
+      return NextResponse.json(
+        { error: "Choose a file smaller than 100 MB." },
+        { status: 413 },
+      );
+    const credentials = await readCredentials();
+    limitCustomer(credentials.apiKey, "upload", 60, 300);
+    release = acquireUpload();
+    const bytes = await readBoundedBody(
+      request,
+      MAX_UPLOAD_BYTES + 1024 * 1024,
+    );
+    const formData = await new Response(new Uint8Array(bytes), {
+      headers: { "Content-Type": request.headers.get("content-type") || "" },
+    }).formData();
     const file = formData.get("file");
     if (!file || !(file instanceof File)) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const credentials = await readStoredCredentials();
-    if (!credentials?.apiKey) {
+    try {
+      validateMediaFile(file);
+    } catch (error) {
       return NextResponse.json(
-        { error: "Please enter your API Key in the top-right before uploading." },
-        { status: 401 },
+        { error: error instanceof Error ? error.message : "Invalid file" },
+        { status: 400 },
       );
     }
 
-    const baseUrl = process.env.HF_API_BASE_URL || "https://api.higgsfield.ai";
+    const baseUrl = credentials.baseUrl;
     const contentType = file.type || "image/png";
 
     // 1. Request presigned upload slot from Higgsfield API
     const slotRes = await fetch(`${baseUrl}/files/generate-upload-url`, {
       method: "POST",
+      signal: AbortSignal.timeout(15000),
+      redirect: "error",
       headers: {
         "Content-Type": "application/json",
         Authorization: toAuthorizationHeader(credentials.apiKey),
@@ -37,8 +70,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
 
     if (!slotRes.ok) {
-      const errText = await slotRes.text();
-      console.error("[upload] Higgsfield generate-upload-url failed", slotRes.status, errText);
       return NextResponse.json(
         { error: `Storage slot generation failed (${slotRes.status})` },
         { status: slotRes.status },
@@ -58,7 +89,15 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    // 2. Upload file bytes to the presigned storage slot (includes signed headers like x-amz-tagging)
+    if (
+      new URL(slot.upload_url).protocol !== "https:" ||
+      new URL(slot.public_url).protocol !== "https:"
+    )
+      return NextResponse.json(
+        { error: "Invalid storage URL" },
+        { status: 502 },
+      );
+    // Upload with the returned signed headers; never send API credentials here.
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     const uploadHeaders: Record<string, string> = {
       "Content-Type": contentType,
@@ -67,26 +106,23 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const putRes = await fetch(slot.upload_url, {
       method: "PUT",
+      signal: AbortSignal.timeout(40000),
+      redirect: "error",
       headers: uploadHeaders,
       body: fileBuffer,
     });
 
     if (!putRes.ok) {
-      const putErr = await putRes.text();
-      console.error("[upload] Storage PUT failed", putRes.status, putErr);
       return NextResponse.json(
         { error: `Media upload to storage failed (${putRes.status})` },
         { status: 502 },
       );
     }
 
-    console.info("[upload] Success:", slot.public_url);
     return NextResponse.json({ url: slot.public_url });
   } catch (error) {
-    console.error("[upload] Unexpected error", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Upload failed" },
-      { status: 500 },
-    );
+    return routeError(error, "Upload failed");
+  } finally {
+    release?.();
   }
 }

@@ -22,7 +22,7 @@ export const useActive = create<ActiveState>()(
   persist(
     (set) => ({
       surface: "video",
-      model: "seedance-2.5",
+      model: "cinema-4",
       batch: 1,
       setModel: (id) => {
         const model = getModel(id);
@@ -41,7 +41,11 @@ export const useActive = create<ActiveState>()(
     {
       name: "openhiggsfield.active.v2",
       storage: browserStorage(),
-      partialize: (state) => ({ surface: state.surface, model: state.model, batch: state.batch }),
+      partialize: (state) => ({
+        surface: state.surface,
+        model: state.model,
+        batch: state.batch,
+      }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         try {

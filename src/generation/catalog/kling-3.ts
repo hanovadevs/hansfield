@@ -1,13 +1,21 @@
 import type { ModelEntry } from "./types";
 
 const klingTurboSettings = {
-  aspectRatio: { type: "enum", values: ["16:9", "9:16", "1:1"], default: "16:9" },
+  aspectRatio: {
+    type: "enum",
+    values: ["16:9", "9:16", "1:1"],
+    default: "16:9",
+  },
   resolution: { type: "enum", values: ["720p", "1080p"], default: "720p" },
   duration: { type: "range", min: 3, max: 15, default: 5 },
 } as const satisfies ModelEntry["settings"];
 
 const kling3Settings = {
-  aspectRatio: { type: "enum", values: ["16:9", "9:16", "1:1"], default: "16:9" },
+  aspectRatio: {
+    type: "enum",
+    values: ["16:9", "9:16", "1:1"],
+    default: "16:9",
+  },
   duration: { type: "range", min: 3, max: 15, default: 5 },
   sound: { type: "boolean", default: true },
   cfgScale: { type: "range", min: 0, max: 1, default: 0.5, step: 0.01 },
@@ -16,7 +24,11 @@ const kling3Settings = {
 
 const klingMotionSettings = {
   keepOriginalSound: { type: "boolean", default: true },
-  characterOrientation: { type: "enum", values: ["video", "image"], default: "video" },
+  characterOrientation: {
+    type: "enum",
+    values: ["video", "image"],
+    default: "video",
+  },
 } as const satisfies ModelEntry["settings"];
 
 export const kling3Turbo: ModelEntry = {
@@ -55,6 +67,7 @@ export const kling3MotionStd: ModelEntry = {
   id: "kling-3-motion-std",
   surface: "video",
   label: "Kling 3.0 Motion Control",
+  requiredRoles: ["start", "video"],
   roles: { start: 1, video: 1 },
   settings: klingMotionSettings,
 };
@@ -63,6 +76,7 @@ export const kling3MotionPro: ModelEntry = {
   id: "kling-3-motion-pro",
   surface: "video",
   label: "Kling 3.0 Motion Control Pro",
+  requiredRoles: ["start", "video"],
   roles: { start: 1, video: 1 },
   settings: klingMotionSettings,
 };

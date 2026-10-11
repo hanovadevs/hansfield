@@ -4,7 +4,14 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 
 import type { MediaItem, MediaRole, ModelEntry } from "@/generation/catalog";
 
-import { ROLE_KINDS, ROLE_LABELS, defaultRole, roleNoun, rolesOf, type AssetKind } from "./data";
+import {
+  ROLE_KINDS,
+  ROLE_LABELS,
+  defaultRole,
+  roleNoun,
+  rolesOf,
+  type AssetKind,
+} from "./data";
 import type { RunRecord } from "./history";
 import {
   AssetsIcon,
@@ -72,7 +79,9 @@ export function AssetPicker({
      already on the plane, so an attached tile opens marked and can be pressed
      off again. An array, not a Set: the order picked is the order attached,
      and a start/end pair is not order-blind. */
-  const [selected, setSelected] = useState<string[]>(() => urlsOf(items, defaultRole(model)));
+  const [selected, setSelected] = useState<string[]>(() =>
+    urlsOf(items, defaultRole(model)),
+  );
   const tabsRef = useRef<HTMLDivElement>(null);
 
   const kind = ROLE_KINDS[role];
@@ -84,7 +93,11 @@ export function AssetPicker({
     () =>
       uploads
         .filter((record) => record.kind === kind)
-        .map((record) => ({ url: record.url, kind: record.kind, title: record.name })),
+        .map((record) => ({
+          url: record.url,
+          kind: record.kind,
+          title: record.name,
+        })),
     [uploads, kind],
   );
 
@@ -93,18 +106,24 @@ export function AssetPicker({
     const out: Asset[] = [];
     for (const record of history) {
       if (record.status !== "completed" || record.kind !== kind) continue;
-      for (const url of record.urls) out.push({ url, kind, title: record.prompt, art: record.art });
+      for (const url of record.urls)
+        out.push({ url, kind, title: record.prompt, art: record.art });
     }
     return out;
   }, [history, kind]);
 
   const shelf: Source =
-    source ?? (uploadAssets.length === 0 && runAssets.length > 0 ? "generations" : "uploads");
+    source ??
+    (uploadAssets.length === 0 && runAssets.length > 0
+      ? "generations"
+      : "uploads");
   const assets = shelf === "uploads" ? uploadAssets : runAssets;
 
   // The dialog takes focus on the control that scopes it, not on the grid.
   useEffect(() => {
-    tabsRef.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
+    tabsRef.current
+      ?.querySelector<HTMLElement>('[aria-selected="true"]')
+      ?.focus();
   }, []);
 
   /* A file uploaded from inside the panel joins the selection rather than the
@@ -163,7 +182,9 @@ export function AssetPicker({
       return;
     }
     setSelected((prev) =>
-      prev.includes(url) ? prev.filter((entry) => entry !== url) : [...prev, url],
+      prev.includes(url)
+        ? prev.filter((entry) => entry !== url)
+        : [...prev, url],
     );
   }
 
@@ -204,7 +225,11 @@ export function AssetPicker({
           : "Done";
 
   return (
-    <div className="ohf-popover ohf-popover--assets" role="dialog" aria-label="Add input">
+    <div
+      className="ohf-popover ohf-popover--assets"
+      role="dialog"
+      aria-label="Add input"
+    >
       <div className="ohf-assets-head">
         <div
           className="ohf-assets-tabs"
@@ -215,7 +240,8 @@ export function AssetPicker({
         >
           {SOURCES.map((id) => {
             const active = id === shelf;
-            const count = id === "uploads" ? uploadAssets.length : runAssets.length;
+            const count =
+              id === "uploads" ? uploadAssets.length : runAssets.length;
             return (
               <button
                 key={id}
@@ -250,13 +276,16 @@ export function AssetPicker({
         <div className="ohf-assets-roles" role="group" aria-label="Input slot">
           {roles.map((entry) => {
             const used =
-              entry === role ? selected.length : items.filter((item) => item.role === entry).length;
+              entry === role
+                ? selected.length
+                : items.filter((item) => item.role === entry).length;
             return (
               <button
                 key={entry}
                 type="button"
                 className="ohf-chip ohf-chip--role"
                 aria-pressed={entry === role}
+                disabled={uploading}
                 onClick={() => pickRole(entry)}
               >
                 {ROLE_LABELS[entry]}
@@ -273,7 +302,11 @@ export function AssetPicker({
         {assets.length === 0 ? (
           <div className="ohf-picker-empty">
             <span className="ohf-picker-empty-ic">
-              {shelf === "uploads" ? <UploadIcon size={15} /> : <AssetsIcon size={15} />}
+              {shelf === "uploads" ? (
+                <UploadIcon size={15} />
+              ) : (
+                <AssetsIcon size={15} />
+              )}
             </span>
             <span className="ohf-picker-empty-title">{empty.title}</span>
             <span className="ohf-picker-empty-hint">{empty.hint}</span>
@@ -300,7 +333,11 @@ export function AssetPicker({
                 aria-label={uploadTip}
                 onClick={() => onUpload(role)}
               >
-                {uploading ? <span className="ohf-spinner" aria-hidden /> : <UploadIcon size={17} />}
+                {uploading ? (
+                  <span className="ohf-spinner" aria-hidden />
+                ) : (
+                  <UploadIcon size={17} />
+                )}
                 <span className="ohf-asset-upload-label">Upload file</span>
               </button>
             )}
@@ -344,7 +381,10 @@ function urlsOf(items: MediaItem[], role: MediaRole): string[] {
   return items.filter((item) => item.role === role).map((item) => item.url);
 }
 
-function emptyCopy(source: Source, kind: AssetKind): { title: string; hint: string } {
+function emptyCopy(
+  source: Source,
+  kind: AssetKind,
+): { title: string; hint: string } {
   if (source === "uploads") {
     return {
       title: "Nothing uploaded yet",
@@ -396,7 +436,10 @@ const AssetTile = memo(function AssetTile({
         video.currentTime = 0;
       }}
     >
-      <span className="ohf-asset-art" style={asset.art ? { background: asset.art } : undefined} />
+      <span
+        className="ohf-asset-art"
+        style={asset.art ? { background: asset.art } : undefined}
+      />
 
       {asset.kind === "video" ? (
         <video
@@ -416,7 +459,12 @@ const AssetTile = memo(function AssetTile({
         /* Blob and platform CDN hosts both; next/image would need every
            provider domain allow-listed up front for a 112px thumb. */
         /* eslint-disable-next-line @next/next/no-img-element */
-        <img className="ohf-asset-media" src={asset.url} alt="" loading="lazy" />
+        <img
+          className="ohf-asset-media"
+          src={asset.url}
+          alt=""
+          loading="lazy"
+        />
       )}
 
       {asset.kind === "video" && (

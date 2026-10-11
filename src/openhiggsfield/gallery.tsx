@@ -1,6 +1,14 @@
 "use client";
 
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from "react";
+import {
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import type { Surface } from "@/generation/catalog";
@@ -21,11 +29,11 @@ import { ModelIcon } from "./model-icon";
 const EMPTY: Record<GalleryView, { title: string; hint: string }> = {
   image: {
     title: "Image Studio",
-    hint: "Enter a prompt below to generate",
+    hint: "Your generated images will appear here",
   },
   video: {
     title: "Video Studio",
-    hint: "Enter a prompt below to generate",
+    hint: "Your generated videos will appear here",
   },
   assets: {
     title: "Library",
@@ -81,7 +89,8 @@ function useInnerWidth(ref: RefObject<HTMLElement | null>): number {
     if (!node) return;
     const measure = () => {
       const styles = getComputedStyle(node);
-      const pad = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
+      const pad =
+        parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
       setWidth(Math.max(0, node.clientWidth - pad));
     };
     measure();
@@ -164,21 +173,20 @@ const Tile = memo(function Tile({
     </button>
   );
 
-  if (item.status === "failed") {
+  if (item.status === "failed" || item.status === "interrupted") {
     return (
-      <div
-        className="ohf-tile ohf-tile--failed"
-        data-picked={picked}
-      >
+      <div className="ohf-tile ohf-tile--failed" data-picked={picked}>
         <div className="ohf-fail">
           <span className="ohf-fail-title">{item.modelLabel}</span>
-          <span className="ohf-fail-why">{item.error || "Generation failed"}</span>
+          <span className="ohf-fail-why">
+            {item.error || "Generation failed"}
+          </span>
           <button
             type="button"
             className="ohf-btn-solid"
             onClick={() => onReuse(item)}
           >
-            Retry
+            Edit inputs
           </button>
         </div>
         {picker}
@@ -219,7 +227,12 @@ const Tile = memo(function Tile({
           /* Platform-hosted result on an arbitrary CDN host; next/image would
              need every provider domain allow-listed up front. */
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img className="ohf-tile-media" src={poster} alt={item.prompt} loading="lazy" />
+          <img
+            className="ohf-tile-media"
+            src={poster}
+            alt={item.prompt}
+            loading="lazy"
+          />
         ))}
 
       {/* While runs are picked the card is part of a selection, so its body
@@ -288,7 +301,9 @@ const Tile = memo(function Tile({
           <button
             type="button"
             className="ohf-tile-act"
-            aria-label={saving ? `Saving — ${named}` : `Download run — ${named}`}
+            aria-label={
+              saving ? `Saving — ${named}` : `Download run — ${named}`
+            }
             title={saving ? "Saving" : "Download"}
             onClick={() => {
               if (saving) return;
@@ -296,7 +311,11 @@ const Tile = memo(function Tile({
               void onDownload(item).finally(() => setSaving(false));
             }}
           >
-            {saving ? <span className="ohf-spinner" aria-hidden /> : <DownloadIcon size={15} />}
+            {saving ? (
+              <span className="ohf-spinner" aria-hidden />
+            ) : (
+              <DownloadIcon size={15} />
+            )}
           </button>
         )}
         <button
@@ -417,14 +436,15 @@ function VirtualizedGrid({
 }) {
   const width = useInnerWidth(scrollRef);
   const slots = useMemo(() => slotsOf(runs, items), [runs, items]);
-  const rows = Math.max(1, Math.ceil(slots.length / COLUMNS));
+  const columns = width < 430 ? 1 : width < 760 ? 2 : COLUMNS;
+  const rows = Math.max(1, Math.ceil(slots.length / columns));
 
   const virtualizer = useVirtualizer({
     count: rows,
     getScrollElement: () => scrollRef.current,
     estimateSize: (row) => {
       if (width <= 0) return 240;
-      const col = (width - GRID_GAP * (COLUMNS - 1)) / COLUMNS;
+      const col = (width - GRID_GAP * (columns - 1)) / columns;
       return col / CARD_RATIO + (row === rows - 1 ? 0 : GRID_GAP);
     },
     overscan: 4,
@@ -432,13 +452,16 @@ function VirtualizedGrid({
 
   useEffect(() => {
     virtualizer.measure();
-  }, [width, slots, virtualizer]);
+  }, [width, columns, slots, virtualizer]);
 
   return (
-    <div className="ohf-grid-window" style={{ height: virtualizer.getTotalSize() }}>
+    <div
+      className="ohf-grid-window"
+      style={{ height: virtualizer.getTotalSize() }}
+    >
       {virtualizer.getVirtualItems().map((row) => {
-        const from = row.index * COLUMNS;
-        const slice = slots.slice(from, from + COLUMNS);
+        const from = row.index * columns;
+        const slice = slots.slice(from, from + columns);
         return (
           <div
             key={row.key}
@@ -446,7 +469,7 @@ function VirtualizedGrid({
             data-selecting={selecting}
             style={
               {
-                "--ohf-cols": COLUMNS,
+                "--ohf-cols": columns,
                 transform: `translateY(${row.start}px)`,
               } as CSSProperties
             }
@@ -515,7 +538,11 @@ function Empty({
           >
             {(samples ?? SAMPLES[surface].slice(0, 3)).map((sample) => (
               <li key={sample}>
-                <button type="button" className="ohf-starter" onClick={() => onStarter(sample)}>
+                <button
+                  type="button"
+                  className="ohf-starter"
+                  onClick={() => onStarter(sample)}
+                >
                   <span className="ohf-starter-text">{sample}</span>
                 </button>
               </li>
@@ -531,7 +558,8 @@ function RunningTile({ run }: { run: ActiveRun }) {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
-    const tick = () => setElapsed(Math.floor((Date.now() - run.startedAt) / 1000));
+    const tick = () =>
+      setElapsed(Math.floor((Date.now() - run.startedAt) / 1000));
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);

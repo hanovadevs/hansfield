@@ -33,7 +33,7 @@ export type GenerationStatus = {
     carries its reason alone, so it cannot lose the answers standing beside it. */
 export type StatusResult =
   | { requestId: string; status: GenerationStatus }
-  | { requestId: string; error: string };
+  | { requestId: string; error: string; retryable?: boolean };
 
 export type PlatformClientOptions = {
   apiKey: string;
@@ -50,32 +50,79 @@ export function createPlatformClient(options: PlatformClientOptions) {
   const fetchImpl = options.fetch ?? fetch;
   const auth = toAuthorizationHeader(options.apiKey);
 
-  async function send(method: "GET" | "POST", path: string, body?: Record<string, unknown>) {
-    const url = `${baseUrl}${path}`;
-    console.info("[platform] request", { method, url, body: body ?? null });
+  async function send(
+    method: "GET" | "POST",
+    path: string,
+    body?: Record<string, unknown>,
+    idempotencyKey?: string,
+  ) {
+    const url = new URL(path, `${baseUrl}/`);
+    if (url.origin !== new URL(baseUrl).origin || url.username || url.password)
+      throw new PlatformError(400, { detail: "Invalid platform request URL" });
     const response = await fetchImpl(url, {
       method,
       headers: {
         Authorization: auth,
         ...(body ? { "Content-Type": "application/json" } : {}),
+        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       },
+      cache: "no-store",
+      signal: AbortSignal.timeout(25000),
+      redirect: "error",
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
 
     const payload = await readJson(response);
-    console.info("[platform] response", { method, url, status: response.status, body: payload });
     if (!response.ok) throw new PlatformError(response.status, payload);
     return payload;
   }
 
   return {
-    async submit(model: string, input: Record<string, unknown>): Promise<QueuedGeneration> {
-      if (!isModelId(model)) throw new PlatformError(400, { detail: "Invalid model" });
-      return mapQueued(await send("POST", `/${model}`, input));
+    async submit(
+      model: string,
+      input: Record<string, unknown>,
+      idempotencyKey = crypto.randomUUID(),
+    ): Promise<QueuedGeneration> {
+      if (!isModelId(model))
+        throw new PlatformError(400, { detail: "Invalid model" });
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return mapQueued(
+            await send("POST", `/${model}`, input, idempotencyKey),
+          );
+        } catch (error) {
+          if (
+            attempt >= 1 ||
+            (error instanceof PlatformError && error.status < 500)
+          )
+            throw error;
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
     },
-    async status(requestId: string): Promise<GenerationStatus> {
-      if (!requestId) throw new PlatformError(400, { detail: "Missing request id" });
-      return mapStatus(await send("GET", `/requests/${encodeURIComponent(requestId)}/status`));
+    async status(
+      requestId: string,
+      statusUrl?: string,
+    ): Promise<GenerationStatus> {
+      if (!requestId)
+        throw new PlatformError(400, { detail: "Missing request id" });
+      if (
+        statusUrl &&
+        new URL(statusUrl, `${baseUrl}/`).pathname !==
+          `/requests/${encodeURIComponent(requestId)}/status`
+      )
+        throw new PlatformError(400, { detail: "Invalid status URL" });
+      return mapStatus(
+        await send(
+          "GET",
+          statusUrl || `/requests/${encodeURIComponent(requestId)}/status`,
+        ),
+      );
+    },
+    async cancel(requestId: string) {
+      if (!requestId)
+        throw new PlatformError(400, { detail: "Missing request id" });
+      await send("POST", `/requests/${encodeURIComponent(requestId)}/cancel`);
     },
   };
 }
@@ -83,7 +130,10 @@ export function createPlatformClient(options: PlatformClientOptions) {
 function mapQueued(payload: unknown): QueuedGeneration {
   const data = asRecord(payload);
   const requestId = stringField(data, "request_id");
-  if (!requestId) throw new PlatformError(502, { detail: "Platform response missing request_id" });
+  if (!requestId)
+    throw new PlatformError(502, {
+      detail: "Platform response missing request_id",
+    });
   return {
     status: stringField(data, "status") ?? "queued",
     requestId,
@@ -118,7 +168,10 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-function stringField(value: Record<string, unknown>, key: string): string | undefined {
+function stringField(
+  value: Record<string, unknown>,
+  key: string,
+): string | undefined {
   const field = value[key];
   return typeof field === "string" ? field : undefined;
 }
@@ -134,7 +187,23 @@ async function readJson(response: Response): Promise<unknown> {
 }
 
 function messageFromBody(status: number, body: unknown): string {
-  const detail = asRecord(body).detail;
+  const data = asRecord(body);
+  const detail = data.detail ?? data.message ?? data.error;
   if (typeof detail === "string" && detail) return detail;
+  if (Array.isArray(detail))
+    return detail
+      .map((item) => {
+        const field = asRecord(item);
+        return `${Array.isArray(field.loc) ? field.loc.filter((part) => part !== "body").join(".") : "Input"}: ${String(field.msg ?? "invalid value")}`;
+      })
+      .join("; ");
+  if (typeof body === "string" && body.length < 300 && !body.includes("<"))
+    return body;
+  if (status === 401)
+    return "Higgsfield rejected the API key. Update your connection.";
+  if (status === 403)
+    return "Higgsfield denied access. Check API credits and model access in the console.";
+  if (status === 429)
+    return "Higgsfield is rate limiting requests. Please wait before trying again.";
   return `Platform request failed (${status})`;
 }

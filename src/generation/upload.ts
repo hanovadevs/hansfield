@@ -1,10 +1,14 @@
+import { validateMediaFile } from "./media-validation";
+
 export async function uploadMedia(file: File): Promise<{ url: string }> {
+  validateMediaFile(file);
   const formData = new FormData();
   formData.append("file", file);
 
   const res = await fetch("/api/upload", {
     method: "POST",
     body: formData,
+    signal: AbortSignal.timeout(60000),
   });
 
   if (!res.ok) {

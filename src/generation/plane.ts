@@ -1,5 +1,6 @@
-import { getModel, parseSettings } from "./catalog";
+import { getModel, resolveSettings } from "./catalog";
 import type { GenerationPlane } from "./catalog/types";
+import { modelForInput } from "./catalog/input-mode";
 import { useActive } from "./stores/active";
 import { useImageMedia, useVideoMedia } from "./stores/media";
 import { useImagePrompt, useVideoPrompt } from "./stores/prompt";
@@ -8,8 +9,11 @@ import { useSettings } from "./stores/settings";
 export function assemblePlane(): GenerationPlane {
   const { model: modelId, surface } = useActive.getState();
   const model = getModel(modelId);
-  const text = (surface === "image" ? useImagePrompt : useVideoPrompt).getState().text;
-  const items = (surface === "image" ? useImageMedia : useVideoMedia).getState().items;
+  const text = (
+    surface === "image" ? useImagePrompt : useVideoPrompt
+  ).getState().text;
+  const items = (surface === "image" ? useImageMedia : useVideoMedia).getState()
+    .items;
   const media: GenerationPlane["media"] = {};
   for (const item of items) {
     const max = model.roles[item.role];
@@ -23,6 +27,9 @@ export function assemblePlane(): GenerationPlane {
     model: model.id,
     prompt: { text },
     media,
-    settings: parseSettings(model, useSettings.getState().byModel[model.id] ?? {}),
+    settings: resolveSettings(
+      modelForInput(model, media),
+      useSettings.getState().byModel[model.id] ?? {},
+    ),
   };
 }

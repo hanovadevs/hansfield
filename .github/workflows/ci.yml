@@ -34,6 +34,8 @@ jobs:
         run: pnpm test:e2e
       - name: Production build
         run: pnpm build
+      - name: Platform adapter build regression
+        run: node scripts/check-platform-build.mjs
       - name: Preserve failed browser evidence
         if: failure()
         uses: actions/upload-artifact@v4

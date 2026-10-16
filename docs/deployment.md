@@ -27,6 +27,25 @@ Never commit the generated value. Rotating it invalidates saved customer
 connections. Customers reconnect; local projects are unaffected. Disable
 `HANSFIELD_TEST_MODE` in production. Keep paid smoke tests opt-in.
 
+## Vercel build compatibility and runtime requirements
+
+On Vercel (`VERCEL=1`), the platform adapter owns packaging. The build disables
+Next standalone output and skips the standalone-copy step. This avoids the Next
+16.3 adapter regression that otherwise ends with missing
+`.next/next-server.js.nft.json`. Local Node and Docker builds keep standalone
+packaging. CI exercises both builds, including the adapter lifecycle and native
+media dependencies; it does not deploy or prove hosted runtime compatibility.
+
+The full app currently requires persistent local SQLite storage and native media
+processing. Standard Vercel Functions have a read-only deployment filesystem and
+ephemeral temporary storage. Putting the journal in `/tmp` would reset budgets and
+lose accepted-request recovery across instances/restarts; do not use that workaround.
+Vercel request bodies also cap at 4.5 MB, below the app's 100 MB upload allowance.
+Full Vercel operation therefore needs a shared transactional journal and direct
+uploads/media processing designed for that platform. A successful Vercel build
+alone is not commercial launch acceptance. Use the persistent Node/container
+deployment below for the current full app.
+
 ## Node deployment
 
 Install the pinned package manager and dependencies, then build:

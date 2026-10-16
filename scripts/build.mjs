@@ -16,4 +16,4 @@ const code = await new Promise((done, fail) => {
   child.on("exit", done);
 });
 if (code !== 0) process.exit(code ?? 1);
-await prepareStandalone();
+if (process.env.VERCEL !== "1") await prepareStandalone();

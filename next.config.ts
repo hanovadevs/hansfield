@@ -3,7 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   distDir: process.env.HANSFIELD_TEST_MODE === "1" ? ".next-test" : ".next",
   serverExternalPackages: ["ffmpeg-static", "ffprobe-static"],
-  output: "standalone",
+  // Vercel's Next 16.3 adapter owns packaging and omits the whole-server NFT.
+  // Asking Next to also copy standalone output then fails on that missing file.
+  output: process.env.VERCEL === "1" ? undefined : "standalone",
   poweredByHeader: false,
   outputFileTracingIncludes: {
     "/api/film/process": [

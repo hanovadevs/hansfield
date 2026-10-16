@@ -2,6 +2,9 @@
 
 ## Unreleased — Team workspace and spending controls
 
+- Fix the Next 16.3 Vercel adapter/standalone packaging conflict. Keep standalone
+  builds for Node/Docker, exercise platform adapter builds in CI, and document
+  Vercel's remaining persistent-storage and upload requirements.
 - Remove the direction-card section from Films. Add explicit rename/delete
   controls on project cards and inside the editor, deletion confirmation and undo,
   and guards that preserve other projects and pending provider jobs.

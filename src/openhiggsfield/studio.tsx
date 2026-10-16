@@ -23,13 +23,13 @@ import {
   countSetting,
   describeModel,
   ROLE_LABELS,
-  settingLabel,
   type GalleryView,
 } from "./data";
 import { CloseIcon, PlusIcon, PlayBadgeIcon, DownloadIcon } from "./icons";
 import { fileNameFor, saveFile } from "./download";
 import type { RunRecord } from "./history";
 import { PricePreview } from "./price-preview";
+import { ModelSettingField } from "./model-setting-field";
 
 const GUIDES: Record<string, { tag: string; text: string }> = {
   "cinema-4": {
@@ -327,60 +327,14 @@ export function StudioComposer({
       tray.items.some((item) => model.roles[item.role])
     )
       return null;
-    const field = model.settings[key];
-    if (!field) return null;
-    const value = values[key] ?? field.default;
-    if (field.type === "boolean")
-      return (
-        <label key={key} className="studio-toggle">
-          <span>{settingLabel(key)}</span>
-          <input
-            type="checkbox"
-            checked={value === true}
-            onChange={(e) => setSettings(model.id, { [key]: e.target.checked })}
-          />
-        </label>
-      );
     return (
-      <label className="studio-field" key={key}>
-        <span>{settingLabel(key)}</span>
-        {field.type === "enum" ? (
-          <select
-            aria-label={settingLabel(key)}
-            value={String(value)}
-            onChange={(e) => setSettings(model.id, { [key]: e.target.value })}
-          >
-            {field.optional && <option value="">Director decides</option>}
-            {field.values.map((v) => (
-              <option key={v} value={v}>
-                {v
-                  .replace(/-/g, " ")
-                  .replace(/^f14 /, "f/1.4 ")
-                  .replace(/^f4 /, "f/4 ")
-                  .replace(/^f11 /, "f/11 ")}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <div className="studio-range">
-            <input
-              aria-label={settingLabel(key)}
-              type="range"
-              min={field.min}
-              max={field.max}
-              step={field.step ?? 1}
-              value={Number(value)}
-              onChange={(e) =>
-                setSettings(model.id, { [key]: Number(e.target.value) })
-              }
-            />
-            <output>
-              {String(value)}
-              {key === "duration" ? "s" : ""}
-            </output>
-          </div>
-        )}
-      </label>
+      <ModelSettingField
+        key={key}
+        model={model}
+        settingKey={key}
+        values={values}
+        onChange={(patch) => setSettings(model.id, patch)}
+      />
     );
   }
   async function submit() {

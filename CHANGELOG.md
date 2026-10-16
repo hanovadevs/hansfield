@@ -2,6 +2,9 @@
 
 ## Unreleased — Team workspace and spending controls
 
+- Expose the Studio's model-specific video controls directly on each film shot,
+  including audio, camera/lens, lighting, pacing and style where supported. Share
+  field controls with Studio, preserve per-shot settings and adapt to input mode.
 - Fix the Next 16.3 Vercel adapter/standalone packaging conflict. Keep standalone
   builds for Node/Docker, exercise platform adapter builds in CI, and document
   Vercel's remaining persistent-storage and upload requirements.

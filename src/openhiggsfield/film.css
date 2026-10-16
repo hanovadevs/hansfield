@@ -115,6 +115,41 @@
   align-self: end;
   min-height: 36px;
 }
+.film-shot-settings {
+  min-width: 0;
+  margin: 18px 0 0;
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.film-shot-settings legend,
+.film-shot-direction h4 {
+  padding: 0;
+  margin: 0;
+  color: var(--tx);
+  font-size: 12px;
+  font-weight: 600;
+}
+.film-shot-settings .film-settings-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.film-shot-direction {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.film-setting-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  align-self: end;
+  color: var(--tx2);
+  font-size: 11px;
+}
+.film-setting-toggle input {
+  accent-color: var(--film-green);
+}
 .film-hint {
   color: var(--tx3);
   font-size: 10px;

@@ -27,6 +27,7 @@ import { CloseIcon, PlusIcon, PlayBadgeIcon, DownloadIcon } from "./icons";
 import { FilmReview } from "./film-review";
 import { cancelGeneration } from "@/generation/client";
 import { FilmProjectDialog } from "./film-project-dialog";
+import { FilmShotSettings } from "./film-shot-settings";
 
 const VIDEO_MODELS = MODELS.filter(
   (m) =>
@@ -1547,78 +1548,14 @@ function FilmShotEditor({
                   </select>
                 </label>
               </div>
-              <div className="film-settings-row">
-                {["duration", "resolution", "aspectRatio"].map((key) => {
-                  const field = settingsModel.settings[key];
-                  if (!field || field.type === "boolean") return null;
-                  const label =
-                    key === "duration"
-                      ? "Duration (s)"
-                      : key === "resolution"
-                        ? "Resolution"
-                        : "Aspect ratio";
-                  return (
-                    <label key={key} className="film-label">
-                      {label}
-                      {field.type === "enum" ? (
-                        <select
-                          aria-label={`Shot ${label.toLowerCase()}`}
-                          disabled={busy}
-                          value={String(
-                            shot.plane.settings[key] ?? field.default,
-                          )}
-                          onChange={(e) =>
-                            patch(shot.id, {
-                              plane: {
-                                ...shot.plane,
-                                settings: resolveSettings(settingsModel, {
-                                  ...shot.plane.settings,
-                                  [key]: e.target.value,
-                                }),
-                              },
-                            })
-                          }
-                        >
-                          {field.values.map((value) => (
-                            <option key={value} value={value}>
-                              {value}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type="number"
-                          aria-label={`Shot ${label.toLowerCase()}`}
-                          disabled={busy}
-                          min={field.min}
-                          max={field.max}
-                          step={field.step ?? 1}
-                          value={Number(
-                            shot.plane.settings[key] ?? field.default,
-                          )}
-                          onChange={(e) => {
-                            const value = e.target.valueAsNumber;
-                            if (
-                              Number.isFinite(value) &&
-                              value >= field.min &&
-                              value <= field.max
-                            )
-                              patch(shot.id, {
-                                plane: {
-                                  ...shot.plane,
-                                  settings: resolveSettings(settingsModel, {
-                                    ...shot.plane.settings,
-                                    [key]: value,
-                                  }),
-                                },
-                              });
-                          }}
-                        />
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
+              <FilmShotSettings
+                model={settingsModel}
+                values={shot.plane.settings}
+                disabled={busy}
+                onChange={(settings) =>
+                  patch(shot.id, { plane: { ...shot.plane, settings } })
+                }
+              />
               {continuation !== "none" && (
                 <p className="film-continuity-note">
                   {previous?.clip

@@ -16,10 +16,10 @@ test("studio renders without errors and keeps native creative settings", async (
     /A lone traveler/,
   );
   await page.getByText("Creative controls", { exact: true }).click();
-  await expect(page.getByLabel("Camera movement")).toHaveValue(
+  await expect(page.getByLabel(/^Camera movement$/i)).toHaveValue(
     "aerial-pullback",
   );
-  await expect(page.getByLabel("Camera lens")).toHaveValue("anamorphic");
+  await expect(page.getByLabel(/^Camera lens$/i)).toHaveValue("anamorphic");
   await page.getByRole("button", { name: "Add to film", exact: true }).click();
   await expect(page.locator(".studio-shot")).toHaveCount(1);
   await page.reload();
@@ -28,7 +28,7 @@ test("studio renders without errors and keeps native creative settings", async (
     .getByRole("button", { name: "Advanced direction", exact: true })
     .click();
   await page.getByText("Creative controls", { exact: true }).click();
-  await expect(page.getByLabel("Camera movement")).toHaveValue(
+  await expect(page.getByLabel(/^Camera movement$/i)).toHaveValue(
     "aerial-pullback",
   );
   expect(errors).toEqual([]);
@@ -51,7 +51,7 @@ test("shot board exports, reorders, restores and imports complete scene controls
     /A lone traveler/,
   );
   await page.getByText("Creative controls", { exact: true }).click();
-  await expect(page.getByLabel("Camera lens")).toHaveValue("anamorphic");
+  await expect(page.getByLabel(/^Camera lens$/i)).toHaveValue("anamorphic");
   await page
     .getByRole("button", { name: "Close shot direction", exact: true })
     .last()

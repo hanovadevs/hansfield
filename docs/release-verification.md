@@ -1,4 +1,34 @@
-# Release verification — 2026-10-11
+# Release verification
+
+## 2026-10-16 — Team workspace and spending controls
+
+- 33 unit/native-media tests and all 33 browser cases passed. Coverage includes
+  signed cost approvals, changed-input/replayed-approval rejection, server budget
+  enforcement, account isolation, receipt recovery without another submission,
+  canceling a film cost review, connected clips, editing and exports.
+- SQLite tests close and reopen the database to verify budget/receipt persistence.
+  Type checking and the optimized standalone build passed without tracing warnings.
+- The production standalone server returned readiness 200 with native tools and
+  the journal available. Anonymous usage and generation returned 401 despite a
+  configured environment key. Journal data is kept outside the deployment package.
+- Real-account price-only checks covered the selectable catalog. Verified
+  description contracts are calculated explicitly; Kling Motion Standard/Pro
+  estimate endpoints returned upstream 500 responses even with real source media.
+  Those paths remain blocked before spending while pricing is unavailable.
+- Production browser checks verified live estimates, cost-review cancellation,
+  budgets, desktop/mobile layouts and zero page errors or mobile overflow.
+  No new generation requests were submitted during these checks.
+- An existing real clip was inspected, split, crossfaded and exported into a
+  playable 3.703-second 1280×720 H.264/AAC MP4. Evidence remains in ignored
+  `artifacts/`, including workspace screenshots and film verification reports.
+- The configured provider credential was absent from 193 candidate source files;
+  generated environment, SQLite and verification data are excluded from packaging.
+
+The latest pushed commit is checked separately by GitHub's Linux browser/build and
+Docker startup jobs. This is application verification, not a live customer-domain
+deployment or a guarantee of provider availability, visual continuity or final cost.
+
+## 2026-10-11 — Initial Jenera release
 
 Local Windows / Node 24 verification:
 

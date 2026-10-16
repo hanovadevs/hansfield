@@ -45,7 +45,7 @@ export default defineConfig({
         HF_API_KEY: "test:secret",
         JENERA_APP_MODE: "byok",
         SESSION_ENCRYPTION_KEY: testSecret,
-        JENERA_DATA_DIR:`artifacts/browser-ledger-${Date.now()}`,
+        JENERA_DATA_DIR: `artifacts/browser-ledger-${Date.now()}`,
         NEXT_TELEMETRY_DISABLED: "1",
       },
     },

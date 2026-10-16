@@ -5,6 +5,7 @@ import { constants } from "node:fs";
 import { tmpdir } from "node:os";
 import ffmpeg from "ffmpeg-static";
 import ffprobe from "ffprobe-static";
+import { ledgerDatabase } from "@/server/usage-ledger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ export async function GET() {
       process.env.NODE_ENV !== "production" ||
       /^[a-f0-9]{64}$/i.test(process.env.SESSION_ENCRYPTION_KEY || "");
     try {
+      ledgerDatabase().prepare("SELECT 1").get();
       const run = promisify(execFile);
       await Promise.all([
         run(process.env.FFMPEG_PATH || ffmpeg!, ["-version"], {

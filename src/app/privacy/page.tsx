@@ -61,6 +61,23 @@ export default function PrivacyPage() {
           </p>
         </section>
         <section className="info-card">
+          <h2>Your usage journal</h2>
+          <p>
+            The server stores spending controls, estimated reservations, model
+            and output settings, timestamps, provider request identifiers and
+            receipts under a hash of your API key. Receipts can contain signed
+            status or cancellation URLs. This supports budgets and recovery
+            across browser refreshes and server restarts. The journal stores
+            neither your API key nor prompt text or media files.
+          </p>
+          <p>
+            Disconnecting removes your connection cookie, not the journal.
+            Reconnecting the same key restores access to its entries. Retention
+            and deletion are managed by the deployment operator; clearing
+            browser data does not remove server records.
+          </p>
+        </section>
+        <section className="info-card">
           <h2>Service operation</h2>
           <p>
             This release includes no advertising or analytics SDK. The hosting

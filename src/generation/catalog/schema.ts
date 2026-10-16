@@ -22,6 +22,7 @@ export type ApiSchema = {
   properties: Record<string, ApiProperty>;
   required?: string[];
   additionalProperties?: boolean;
+  then?: { required?: string[] };
 };
 const endpoints = snapshot.endpoints as Record<
   string,
@@ -46,6 +47,13 @@ export function documentedSettings(
   if (!schema) return fallback;
   const settings: Record<string, SettingField> = {};
   for (const [key, prop] of Object.entries(schema.properties)) {
+    // Conditional custom-shot modes need structured prompts. Keep the native
+    // toggle hidden until those inputs can be supplied; Films handles sequences.
+    if (
+      key === "multi_shots" &&
+      schema.then?.required?.includes("multi_prompt")
+    )
+      continue;
     if (
       [
         "prompt",

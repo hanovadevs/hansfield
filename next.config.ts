@@ -16,7 +16,13 @@ const nextConfig: NextConfig = {
     ],
   },
   outputFileTracingExcludes: {
-    "/*": ["./artifacts/**/*", "./tests/**/*", "./.env*"],
+    "/*": [
+      "./artifacts/**/*",
+      "./tests/**/*",
+      "./data/**/*",
+      "./**/*.sqlite*",
+      "./.env*",
+    ],
   },
   async headers() {
     return [

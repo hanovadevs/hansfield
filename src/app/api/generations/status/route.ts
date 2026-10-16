@@ -39,8 +39,12 @@ export async function POST(request: Request) {
     const results = await Promise.all(
       requests.map(async ({ requestId, statusUrl }) => {
         try {
-          const status=await client.status(requestId,statusUrl);
-          updateUsageState(credentialIdentity(credentials.apiKey),requestId,status.status);
+          const status = await client.status(requestId, statusUrl);
+          updateUsageState(
+            credentialIdentity(credentials.apiKey),
+            requestId,
+            status.status,
+          );
           return {
             requestId,
             status,

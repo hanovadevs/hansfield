@@ -171,41 +171,50 @@ test("film submissions recover from a lost response using the same intent, witho
     "1 ready",
     { timeout: 40000 },
   );
-  expect(identities).toHaveLength(2);
-  expect(identities[1]).toBe(identities[0]);
-  expect(accepted[1]).toBe(accepted[0]);
+  expect(identities).toHaveLength(1);
+  expect(
+    await page.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem("hansfield.storyboard.v1")!).state
+          .shots[0].clipRevision,
+    ),
+  ).toBe(accepted[0]);
   await expect(page.locator(".ohf-tile--failed")).toHaveCount(0);
 });
 
-test("accepted film jobs resume after refresh and the remaining plan stays explicit", async ({
-  page,
-}) => {
-  let submissions = 0;
-  page.on("request", (request) => {
-    if (request.url().endsWith("/api/generations")) submissions++;
+test.describe("explicit film approval", () => {
+  test.use({ autoApproveSpend: false });
+  test("accepted film jobs resume after refresh and the remaining plan stays explicit", async ({
+    page,
+  }) => {
+    let submissions = 0;
+    page.on("request", (request) => {
+      if (request.url().endsWith("/api/generations")) submissions++;
+    });
+    await plan(page);
+    await page
+      .getByRole("button", { name: "Generate remaining (2)", exact: true })
+      .click();
+    await page.getByRole("button", { name: /^Approve .* estimate$/ }).click();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            JSON.parse(localStorage.getItem("hansfield.storyboard.v1")!).state
+              .shots[0].job?.requestId,
+        ),
+      )
+      .toBeTruthy();
+    await page.reload();
+    await expect(page.locator(".film-timeline-caption")).toContainText(
+      "1 ready",
+      { timeout: 40000 },
+    );
+    await expect(
+      page.getByRole("button", { name: "Generate remaining (1)", exact: true }),
+    ).toBeEnabled();
+    expect(submissions).toBe(1);
   });
-  await plan(page);
-  await page
-    .getByRole("button", { name: "Generate remaining (2)", exact: true })
-    .click();
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          JSON.parse(localStorage.getItem("hansfield.storyboard.v1")!).state
-            .shots[0].job?.requestId,
-      ),
-    )
-    .toBeTruthy();
-  await page.reload();
-  await expect(page.locator(".film-timeline-caption")).toContainText(
-    "1 ready",
-    { timeout: 40000 },
-  );
-  await expect(
-    page.getByRole("button", { name: "Generate remaining (1)", exact: true }),
-  ).toBeEnabled();
-  expect(submissions).toBe(1);
 });
 
 test("stopping a film waits for its current shot and avoids submitting later shots", async ({

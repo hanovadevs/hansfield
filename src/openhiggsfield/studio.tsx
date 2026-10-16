@@ -145,7 +145,7 @@ export function StudioHeader({
   onFilms,
   navigationDisabled = false,
   onUsage,
-  usageOpen=false,
+  usageOpen = false,
   onTools,
 }: {
   view: GalleryView;
@@ -156,9 +156,9 @@ export function StudioHeader({
   workspace?: "studio" | "films";
   onFilms?: () => void;
   navigationDisabled?: boolean;
-  onUsage?:()=>void;
-  usageOpen?:boolean;
-  onTools?:()=>void;
+  onUsage?: () => void;
+  usageOpen?: boolean;
+  onTools?: () => void;
 }) {
   return (
     <header className="studio-header">
@@ -172,7 +172,15 @@ export function StudioHeader({
         />
         <span className="jenera-wordmark">{BRAND_NAME}</span>
       </a>
-      <button type="button" className="workspace-search-button" onClick={onTools} disabled={navigationDisabled}><span>Search tools</span><kbd>⌘ K</kbd></button>
+      <button
+        type="button"
+        className="workspace-search-button"
+        onClick={onTools}
+        disabled={navigationDisabled}
+      >
+        <span>Search tools</span>
+        <kbd>⌘ K</kbd>
+      </button>
       <span className="rail-section-label">WORKSPACE</span>
       <nav className="studio-navigation" aria-label="Workspace">
         {(["video", "assets", "favorites"] as GalleryView[]).map((id) => (
@@ -182,7 +190,8 @@ export function StudioHeader({
             type="button"
             disabled={navigationDisabled}
             aria-current={
-              !usageOpen && workspace === "studio" &&
+              !usageOpen &&
+              workspace === "studio" &&
               (view === id || (id === "video" && view === "image"))
                 ? "page"
                 : undefined
@@ -202,13 +211,22 @@ export function StudioHeader({
         <button
           type="button"
           className="nav-films"
-          aria-current={!usageOpen && workspace === "films" ? "page" : undefined}
+          aria-current={
+            !usageOpen && workspace === "films" ? "page" : undefined
+          }
           disabled={navigationDisabled}
           onClick={onFilms}
         >
           Films
         </button>
-        <button type="button" disabled={navigationDisabled} onClick={onUsage} aria-current={usageOpen?"page":undefined}>Usage</button>
+        <button
+          type="button"
+          disabled={navigationDisabled}
+          onClick={onUsage}
+          aria-current={usageOpen ? "page" : undefined}
+        >
+          Usage
+        </button>
       </nav>
       <a className="studio-help" href="/help" target="_blank" rel="noreferrer">
         Help
@@ -635,7 +653,17 @@ export function StudioComposer({
         {tray.input}
       </div>
       <div className="studio-submit-area">
-        {!filmShotId&&<PricePreview fingerprint={JSON.stringify([model.id,values,prompt.text,tray.items,batch])}/>}
+        {!filmShotId && (
+          <PricePreview
+            fingerprint={JSON.stringify([
+              model.id,
+              values,
+              prompt.text,
+              tray.items,
+              batch,
+            ])}
+          />
+        )}
         {notice}
         {error && (
           <div className="studio-error" role="alert">

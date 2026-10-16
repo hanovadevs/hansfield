@@ -81,8 +81,12 @@ export function createPlatformClient(options: PlatformClientOptions) {
   }
 
   return {
-    async estimate(model:string,input:Record<string,unknown>):Promise<unknown> {
-      if(!isModelId(model)) throw new PlatformError(400,{detail:"Invalid model"});
+    async estimate(
+      model: string,
+      input: Record<string, unknown>,
+    ): Promise<unknown> {
+      if (!isModelId(model))
+        throw new PlatformError(400, { detail: "Invalid model" });
       return send("POST", `/estimate/${model}`, input);
     },
     async submit(
@@ -97,7 +101,7 @@ export function createPlatformClient(options: PlatformClientOptions) {
           const result = mapQueued(
             await send("POST", `/${model}`, input, idempotencyKey),
           );
-          return {...result,...(correlationId?{correlationId}:{})};
+          return { ...result, ...(correlationId ? { correlationId } : {}) };
         } catch (error) {
           if (
             attempt >= 1 ||

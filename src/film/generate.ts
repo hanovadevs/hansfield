@@ -1,4 +1,5 @@
 import { getModel } from "@/generation/catalog";
+import { SpendReviewCanceledError } from "@/generation/spend-review";
 import { useStoryboard } from "@/generation/stores/storyboard";
 import { submitGeneration, GenerationRequestError } from "@/generation/client";
 import { watchRequest } from "@/generation/poll";
@@ -129,7 +130,6 @@ export async function generateFilmShot(
       }
       job.phase = "submitting";
       useStoryboard.getState().patch(id, { job: { ...job } });
-      publish(recordFor(shot, job, "interrupted"));
       const queued = await submitGeneration(job.plane, job.idempotencyKey);
       // Replace the local intent row with the accepted provider row in the gallery.
       job = {
@@ -178,6 +178,10 @@ export async function generateFilmShot(
     // Component cleanup stops polling, not the accepted provider request.
     // Keep it queued so the next mount can resume it automatically.
     if (message === "Watching stopped") throw error;
+    if (error instanceof SpendReviewCanceledError) {
+      useStoryboard.getState().patch(id, { job: undefined });
+      throw error;
+    }
     if (job.phase !== "failed") {
       const rejected =
         !job.plane ||

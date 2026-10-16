@@ -38,7 +38,11 @@ export async function prepareStandalone() {
   // Next may copy dotenv files into standalone output. Only remove generated
   // deployment copies, never the workspace's environment files or artifacts.
   for (const entry of await readdir(root)) {
-    if (!entry.startsWith(".env") && !["artifacts", "tests"].includes(entry))
+    if (
+      !entry.startsWith(".env") &&
+      !["artifacts", "tests", "data"].includes(entry) &&
+      !/\.sqlite(?:-|$)/.test(entry)
+    )
       continue;
     const target = resolve(root, entry);
     const rel = relative(root, target);

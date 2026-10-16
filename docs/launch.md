@@ -10,6 +10,8 @@ credit wallet, cloud accounts or team synchronization.
 - Jenera identity, generated transparent mark, wordmark, browser/install icons,
   social preview and brand board.
 - Separate Studio, Films and searchable Library experiences.
+- Persistent workspace navigation, keyboard tool search, live cost estimates,
+  per-shot approval and per-key estimated budgets with a durable request journal.
 - Saved projects, alternate cuts, archive/restore, story planning, connected
   generation, reference preparation, native trimming/splitting, sequence review,
   selected-shot MP4 exports and project backups.
@@ -22,7 +24,7 @@ credit wallet, cloud accounts or team synchronization.
 ## Hosting acceptance
 
 Before inviting customers, select an HTTPS host/domain and configure the vault
-secret. Verify `/api/health`, connect a real API key, upload a reference, explicitly
+secret and a persistent writable `JENERA_DATA_DIR` volume. Verify `/api/health`, connect a real API key, upload a reference, explicitly
 approve a paid short generation, download/play it, generate a connected second
 shot, trim/split, and export/play the assembled film. Confirm a second browser
 cannot inherit the first customer's connection or view its local projects.

@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — Team workspace and spending controls
+
+- Add a persistent forest navigation rail, responsive workspace layout and
+  keyboard tool search for Studio, Films, Library, connection and Usage.
+- Preview authenticated generation estimates, require input-bound cost approval
+  and review film shots individually before paid submission.
+- Add per-key request/daily budgets, atomic durable SQLite reservations, a
+  searchable request journal and CSV export. Label estimates and older records
+  honestly; preserve provider request/correlation identifiers for troubleshooting.
+- Replay accepted provider receipts on recovery without another submission.
+  Canceling a film cost review restores the shot to its planned state.
+- Require Node 22.13+, persist the journal outside deployment output, and include
+  storage readiness, data-volume configuration and pricing/budget regression tests.
+
 ## 1.0.0 — Jenera public BYOK release preparation
 
 The original studio's unreliable generation and single-board workflow are replaced

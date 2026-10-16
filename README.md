@@ -17,12 +17,13 @@ This release prepares the public **bring-your-own-key** product. It includes ver
 - Review the kept clips in order with a sequence playhead before rendering. Export all ready shots or select shots for another cut, with landscape/portrait/square presets, 720p/1080p and clean cuts or crossfades. Trimming, splitting, reviewing and exporting do not submit generation requests.
 - Search/filter the dedicated media library, reuse a creation in the composer, save favorites, download, or delete with undo. History lives in browser IndexedDB; prompts, settings, projects and story drafts persist locally.
 - Independently retried status polling, refresh recovery, cancellation, and reviewable failed jobs. Interrupted tracking can resume. Uncertain submissions retain the original inputs and idempotency key for recovery.
+- Persistent workspace navigation and searchable tools (`Ctrl/Cmd+K`). Usage shows request identifiers, estimated costs, per-key budgets and CSV export. Before generating, review the price for the exact settings and number of requests; film shots are approved individually.
 
 The catalog was checked against [Higgsfield's official model documentation](https://docs.higgsfield.ai/). Endpoint schemas and source links are checked in at `src/generation/catalog/api-schemas.json`. Model availability, credits, output quality, and generation times depend on the provider and your account. Each variation submits a separate paid request.
 
 ## Run locally
 
-Use Node.js 22.12 or newer and the pinned pnpm. Install from the committed lockfile:
+Use Node.js 22.13 or newer and the pinned pnpm. Install from the committed lockfile:
 
 ```powershell
 npm install --global pnpm@12.5.1
@@ -51,6 +52,10 @@ Open [localhost:3000](http://localhost:3000). Choose a starting scene or write y
 For a longer film, open **Films → New film**, write one story beat per line in **Story**, and select a target length, model, shot duration and connection method. Add shared continuity notes, then choose **Create shot plan**. In **Shots**, choose **Generate remaining**; each shot runs after the preceding clip is available. Trim/split, reorder, or open **Advanced direction** for complete model controls and references. **Review** plays the kept sequence; **Export** assembles all or selected shots into an MP4. **Add next shot** extends a sequence. **Alternate cut** duplicates a project while preserving its original. Export dimensions fit footage without stretching; crossfades overlap shots and slightly shorten the final duration. Unrendered shots are explicitly excluded from exports.
 
 Keep the tab open while generating a sequence. Accepted jobs resume after refresh; remaining planned shots require a new click. Uncertain submissions retain their original request identifier and inputs for **Resume shot**. **Stop after current shot** prevents later requests while allowing the current job to finish; **Cancel shot** requests provider cancellation of an accepted shot. Project switching waits for active generation/uploads/exports. Each generated or regenerated shot uses provider credits. Continuity references guide the selected model; visual identity and seamless motion still depend on its output.
+
+**Usage** keeps a durable per-key journal on the server, with default estimated limits of $5 per provider request and $25 per UTC day. Customers can adjust their limits. The server reserves the estimate atomically before submitting, and replays accepted receipts without another provider submission. Approval tickets bind the connected key, exact inputs, request count and estimate for ten minutes. Numeric estimates come from the authenticated Higgsfield `/estimate` endpoint; verified Seedance/Cinema token and Wan/Genjutsu duration descriptions are calculated before discounts. Unknown pricing blocks generation. Video-based token estimates inspect source duration first. These are estimates, not actual charges or provider balance, and the limits cover only this Jenera installation. Older history is shown without fabricated dollar amounts.
+
+The journal uses Node's built-in SQLite module in `JENERA_DATA_DIR` (default `./data`). Keep this directory on a persistent writable local disk; back it up consistently with SQLite/WAL. It stores a hash of the API key, estimates, request identifiers, provider receipts and budget settings, never the key or prompt text. Provider receipts can contain signed status/cancel URLs: protect the data volume. Browser projects remain local. Do not use independent ephemeral instances for this journal.
 
 The film editor supports up to 40 shots and 10 minutes per export, with a 100 MB source-file limit and 500 MB total downloaded source limit. MP4 processing runs through native FFmpeg and FFprobe on the Node server. The installation permits the FFmpeg binary download. Optional `FFMPEG_PATH` and `FFPROBE_PATH` overrides select installed executables. A deployment needs executable binaries, writable temporary storage and enough runtime/memory for rendering; remote deployment has not been verified.
 

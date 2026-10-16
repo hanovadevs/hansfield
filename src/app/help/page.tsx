@@ -39,7 +39,7 @@ export default function HelpPage() {
               In <strong>Studio</strong>, describe your scene, choose a model
               and add supported references. Open{" "}
               <strong>Creative controls</strong> when you need precise
-              direction.
+              direction. Review and approve the cost before submission.
             </li>
           </ol>
         </section>
@@ -78,9 +78,27 @@ export default function HelpPage() {
           </p>
         </section>
         <section className="info-card">
+          <h2>Review costs and budgets</h2>
+          <p>
+            Open <strong>Usage</strong> for your request journal, request IDs,
+            CSV export and spending controls. Defaults are $5 per request and
+            $25 per UTC day, adjustable for your connected key. Each film shot
+            has its own cost review. Canceling that review submits no
+            generation.
+          </p>
+          <p>
+            Prices are estimates. Calculated token prices are before discounts;
+            final charges come from Higgsfield. Limits cover tracked Jenera
+            requests, including pending reservations, and cannot cap spending in
+            other apps. Older history has no verified cost. Open provider
+            billing for actual charges.
+          </p>
+        </section>
+        <section className="info-card">
           <h2>Useful shortcuts and limits</h2>
           <p>
-            <kbd>Ctrl / Cmd</kbd> + <kbd>Enter</kbd> generates from the
+            <kbd>Ctrl / Cmd</kbd> + <kbd>K</kbd> opens tool search.
+            <kbd>Ctrl / Cmd</kbd> + <kbd>Enter</kbd> opens cost review from the
             composer. <kbd>Ctrl / Cmd</kbd> + <kbd>Z</kbd> undoes timeline
             edits; add <kbd>Shift</kbd> to redo. <kbd>Esc</kbd> closes dialogs.
           </p>

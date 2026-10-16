@@ -27,7 +27,7 @@
   opacity: 0.45;
 }
 .ohf :focus-visible {
-  outline: 2px solid #ad4727;
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 .studio-header {
@@ -462,15 +462,15 @@
   justify-content: space-between;
   width: 100%;
   border-radius: 6px;
-  background: #ad4727 !important;
-  color: #fff7ef !important;
+  background: var(--accent) !important;
+  color: var(--accent-ink) !important;
   padding: 13px 17px !important;
   font-size: 12px;
   font-weight: 550;
   transition: background 150ms;
 }
 .studio-generate:hover:not(:disabled) {
-  background: #923a1f !important;
+  background: var(--accent-strong) !important;
 }
 .studio-generate > span:last-child {
   font-size: 22px;

@@ -48,7 +48,9 @@ export default function HelpPage() {
           <ol>
             <li>
               Open <strong>Films → New film</strong>. Write one story beat per
-              line, set the length, and create your shot plan.
+              line. The preview shows how many clips you’ll create. Keep
+              <strong> Fit my scenes</strong> for one clip per line, then create
+              your shot plan.
             </li>
             <li>
               In <strong>Shots</strong>, generate the sequence. A connected shot
@@ -57,8 +59,9 @@ export default function HelpPage() {
             </li>
             <li>
               Trim, split at the playhead, reorder, or make an alternate cut.{" "}
-              <strong>Review</strong> plays the sequence;{" "}
-              <strong>Export</strong> renders the chosen shots into an MP4.
+              Choose <strong>Continue to review</strong> to play the sequence,
+              then <strong>Continue to export</strong>. <strong>Export</strong>{" "}
+              renders the chosen shots into an MP4.
             </li>
           </ol>
         </section>
@@ -69,6 +72,12 @@ export default function HelpPage() {
             Use <strong>Export board</strong> to save a project backup and{" "}
             <strong>Import project</strong> to reopen it elsewhere. Download
             finished media promptly; provider links can expire.
+          </p>
+          <p>
+            Use <strong>Rename</strong> or <strong>Delete</strong> on a project
+            card, or the corresponding buttons inside a film. Deletion asks for
+            confirmation and offers undo until the app is closed or reloaded.
+            Finish or resume pending clips before deleting their project.
           </p>
           <p>
             Keep the tab open while a sequence generates. Accepted jobs recover

@@ -48,7 +48,13 @@ test("projects preserve separate stories, alternate cuts, undo, archive and book
       hydrationErrors.push(message.text());
   });
   await page.goto("/?workspace=films");
-  await page.getByRole("button", { name: /A small adventure/ }).click();
+  await page.getByRole("button", { name: "+ New film", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Use a short example", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Create shot plan", exact: true })
+    .click();
   await page.getByLabel("Film title").fill("Original film");
   await page
     .getByRole("button", { name: "Remove shot 2", exact: true })

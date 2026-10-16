@@ -32,6 +32,11 @@ type Board = {
   openProject: (id: string) => void;
   duplicateProject: (id: string) => string;
   archiveProject: (id: string, archived: boolean) => void;
+  renameProject: (id: string, title: string) => void;
+  deleteProject: (id: string) => void;
+  deletedProject: FilmProject | null;
+  restoreDeletedProject: () => void;
+  dismissDeletedProject: () => void;
   undo: () => void;
   redo: () => void;
   title: string;
@@ -115,6 +120,7 @@ export const useStoryboard = create<Board>()(
         activeProjectId: null,
         undoStack: [],
         redoStack: [],
+        deletedProject: null,
         createProject: (title = "Untitled film") => {
           available();
           const project: FilmProject = {
@@ -180,6 +186,66 @@ export const useStoryboard = create<Board>()(
             ),
           }));
         },
+        renameProject: (id, title) => {
+          available();
+          const name = title.trim();
+          if (!name || name.length > 120)
+            throw new Error(
+              "Enter a project name between 1 and 120 characters.",
+            );
+          if (!get().projects.some((project) => project.id === id))
+            throw new Error("Film project not found.");
+          if (get().activeProjectId === id) set({ title: name });
+          else
+            rawSet((state) => ({
+              projects: state.projects.map((project) =>
+                project.id === id
+                  ? { ...project, title: name, updatedAt: Date.now() }
+                  : project,
+              ),
+            }));
+        },
+        deleteProject: (id) => {
+          available();
+          const project = get().projects.find((project) => project.id === id);
+          if (!project) throw new Error("Film project not found.");
+          if (
+            project.shots.some(
+              (shot) => shot.job && shot.job.phase !== "failed",
+            )
+          )
+            throw new Error(
+              "Finish, cancel or resume pending clips before deleting this project.",
+            );
+          rawSet((state) => ({
+            projects: state.projects.filter((project) => project.id !== id),
+            deletedProject: structuredClone(project),
+            ...(state.activeProjectId === id
+              ? {
+                  activeProjectId: null,
+                  title: "Untitled film",
+                  notes: "",
+                  story: "",
+                  shots: [],
+                  undoStack: [],
+                  redoStack: [],
+                }
+              : {}),
+          }));
+        },
+        restoreDeletedProject: () => {
+          available();
+          const project = get().deletedProject;
+          if (!project) return;
+          rawSet((state) => ({
+            projects: [
+              ...state.projects.filter((item) => item.id !== project.id),
+              { ...project, updatedAt: Date.now() },
+            ],
+            deletedProject: null,
+          }));
+        },
+        dismissDeletedProject: () => rawSet({ deletedProject: null }),
         undo: () => {
           if (get().generating || !get().undoStack.length) return;
           const state = get(),

@@ -183,6 +183,59 @@ test("changed scene inputs regenerate the linked chain and stop at an independen
   );
   assert.equal(shotsNeedingGeneration(shots, "Red coat").length, 4);
 });
+test("project rename and deletion preserve other films, allow undo and clear the deleted active board", () => {
+  useStoryboard.setState({
+    projects: [],
+    activeProjectId: null,
+    shots: [],
+    story: "",
+    notes: "",
+    generating: false,
+    editingBusy: false,
+    deletedProject: null,
+    undoStack: [],
+    redoStack: [],
+  });
+  const state = useStoryboard.getState();
+  const first = state.createProject("First");
+  state.append([readyShot()]);
+  state.setStory("Original story");
+  const second = state.createProject("Second");
+  state.renameProject(first, "Renamed first");
+  assert.equal(useStoryboard.getState().title, "Second");
+  assert.equal(
+    useStoryboard.getState().projects.find((project) => project.id === first)
+      ?.title,
+    "Renamed first",
+  );
+  state.deleteProject(first);
+  assert.equal(useStoryboard.getState().activeProjectId, second);
+  assert.equal(useStoryboard.getState().projects.length, 1);
+  state.restoreDeletedProject();
+  state.openProject(first);
+  assert.equal(useStoryboard.getState().shots.length, 1);
+  assert.equal(useStoryboard.getState().story, "Original story");
+  state.deleteProject(first);
+  assert.equal(useStoryboard.getState().activeProjectId, null);
+  assert.equal(useStoryboard.getState().shots.length, 0);
+  assert.equal(useStoryboard.getState().story, "");
+  assert.equal(useStoryboard.getState().undoStack.length, 0);
+  state.restoreDeletedProject();
+  state.openProject(first);
+  const shot = useStoryboard.getState().shots[0]!;
+  state.patch(shot.id, {
+    job: {
+      phase: "queued",
+      requestId: "pending-job",
+      idempotencyKey: "pending-intent",
+      startedAt: Date.now(),
+    },
+  });
+  assert.throws(() => state.deleteProject(first), /pending clips/);
+  assert.throws(() => state.renameProject(first, "  "), /project name/);
+  state.patch(shot.id, { job: undefined });
+});
+
 test("board round-trip retains cuts and connections but strips active jobs", () => {
   const first = readyShot();
   const second = {

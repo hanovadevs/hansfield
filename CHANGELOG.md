@@ -2,6 +2,13 @@
 
 ## Unreleased — Team workspace and spending controls
 
+- Remove the direction-card section from Films. Add explicit rename/delete
+  controls on project cards and inside the editor, deletion confirmation and undo,
+  and guards that preserve other projects and pending provider jobs.
+- Guide film creation through scenes, connected clips, review and export. Default
+  to one clip per scene, preview count/duration before planning, move model settings
+  behind an optional section, and add clear next-step actions and scene summaries.
+
 - Add a persistent forest navigation rail, responsive workspace layout and
   keyboard tool search for Studio, Films, Library, connection and Usage.
 - Preview authenticated generation estimates, require input-bound cost approval

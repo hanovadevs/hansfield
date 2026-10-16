@@ -3,31 +3,7 @@
 import { useRef, useState } from "react";
 import { useStoryboard } from "@/generation/stores/storyboard";
 import { cutOf } from "@/film/types";
-import { planShots } from "@/film/plan";
-
-const STARTERS = [
-  {
-    name: "A small adventure",
-    tag: "Narrative",
-    color: "sage",
-    story:
-      "A traveler finds a hidden trail in a misty forest.\nShe follows a warm light between the trees.\nThe trail opens onto a moonlit lake.",
-  },
-  {
-    name: "Something worth a closer look",
-    tag: "Product",
-    color: "clay",
-    story:
-      "A ceramic perfume bottle stands on a stone pedestal in soft morning light.\nThe camera approaches its sculpted surface as a ribbon of light moves across it.\nA slow orbit reveals the complete bottle against a clean backdrop.",
-  },
-  {
-    name: "A place, a feeling",
-    tag: "Travel",
-    color: "sand",
-    story:
-      "The sun rises over a quiet coastal village.\nThe camera follows the same narrow street toward the sea.\nThe street opens onto a golden beach as the tide rolls in.",
-  },
-];
+import { FilmProjectDialog } from "./film-project-dialog";
 
 export function FilmProjects({
   onOpen,
@@ -39,6 +15,13 @@ export function FilmProjects({
   const board = useStoryboard();
   const [search, setSearch] = useState("");
   const [archived, setArchived] = useState(false);
+  const [dialog, setDialog] = useState<{
+    id: string;
+    mode: "rename" | "delete";
+  } | null>(null);
+  const dialogProject = board.projects.find(
+    (project) => project.id === dialog?.id,
+  );
   const input = useRef<HTMLInputElement>(null);
   const projects = board.projects
     .filter(
@@ -60,10 +43,8 @@ export function FilmProjects({
       <div className="project-heading">
         <div>
           <span className="studio-eyebrow">YOUR FILMS</span>
-          <h1>
-            Give your story <em>room.</em>
-          </h1>
-          <p>One project. Every shot. Your final cut.</p>
+          <h1>Your film projects.</h1>
+          <p>Create a film, generate its clips, and assemble the final cut.</p>
         </div>
         <button
           className="ux-primary"
@@ -73,40 +54,20 @@ export function FilmProjects({
           + New film
         </button>
       </div>
-      <div className="project-start-heading">
-        <h2>Start with a direction</h2>
-        <span>Editable shot plans</span>
-      </div>
-      <div className="project-starters">
-        {STARTERS.map((starter, i) => (
-          <button
-            key={starter.name}
-            className={`project-starter ${starter.color}`}
-            disabled={board.generating}
-            onClick={() =>
-              act(() => {
-                const id = board.createProject(starter.name);
-                board.setStory(starter.story);
-                board.append(
-                  planShots(starter.story, "seedance-2.5", 15, 5, "frame"),
-                );
-                onOpen(id);
-              })
-            }
-          >
-            <span className="starter-art" aria-hidden>
-              <i />
-              <b />
-              <small>0{i + 1}</small>
-            </span>
-            <span>{starter.tag}</span>
-            <strong>{starter.name}</strong>
-            <span className="starter-go" aria-hidden>
-              ↗
-            </span>
+      {board.deletedProject && (
+        <div className="project-deleted-notice" role="status">
+          <span>“{board.deletedProject.title}” deleted.</span>
+          <button onClick={() => act(board.restoreDeletedProject)}>
+            Undo project deletion
           </button>
-        ))}
-      </div>
+          <button
+            aria-label="Dismiss project deletion"
+            onClick={board.dismissDeletedProject}
+          >
+            ×
+          </button>
+        </div>
+      )}
       <div className="project-list-heading">
         <div>
           <h2>{archived ? "Archived films" : "Your projects"}</h2>
@@ -168,15 +129,28 @@ export function FilmProjects({
                     </span>
                   )}
                   <span>
-                    {complete.length}/{project.shots.length} ready
+                    {project.shots.length
+                      ? `${complete.length}/${project.shots.length} ready`
+                      : "New project"}
                   </span>
                 </div>
                 <h3>{project.title}</h3>
                 <p>
-                  {project.shots.length} shots · {seconds.toFixed(1)}s kept
+                  {project.shots.length
+                    ? complete.length
+                      ? `${project.shots.length} clips · ${seconds.toFixed(1)}s ready`
+                      : `${project.shots.length} clips planned`
+                    : "Ready to write your scenes"}
                 </p>
               </button>
               <div className="project-card-actions">
+                <button
+                  disabled={board.generating || board.editingBusy}
+                  aria-label={`Rename film ${project.title}`}
+                  onClick={() => setDialog({ id: project.id, mode: "rename" })}
+                >
+                  Rename
+                </button>
                 <button
                   disabled={board.generating}
                   onClick={() =>
@@ -196,6 +170,14 @@ export function FilmProjects({
                 >
                   {project.archived ? "Restore" : "Archive"}
                 </button>
+                <button
+                  className="project-delete"
+                  disabled={board.generating || board.editingBusy}
+                  aria-label={`Delete film ${project.title}`}
+                  onClick={() => setDialog({ id: project.id, mode: "delete" })}
+                >
+                  Delete
+                </button>
               </div>
             </article>
           );
@@ -214,9 +196,18 @@ export function FilmProjects({
           <p>
             {search
               ? "Try a different title."
-              : "Create a project or choose a starting direction."}
+              : archived
+                ? "Archived projects appear here."
+                : "Choose New film to write your scenes. Already have a project? Import its backup."}
           </p>
         </div>
+      )}
+      {dialog && dialogProject && (
+        <FilmProjectDialog
+          project={dialogProject}
+          mode={dialog.mode}
+          onClose={() => setDialog(null)}
+        />
       )}
       <input
         hidden

@@ -1065,3 +1065,464 @@
     transition: none;
   }
 }
+
+/* Guided film creation and explicit project management. */
+.film-projects .project-heading {
+  margin-bottom: 32px;
+}
+.project-card-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.project-card-actions button {
+  padding: 7px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.project-card-actions .project-delete,
+.studio-board-actions .project-delete {
+  color: #985043;
+}
+.project-deleted-notice {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 18px;
+  margin-bottom: 25px;
+  border: 1px solid #ccd8bd;
+  border-radius: 10px;
+  background: #e8efdb;
+  font-size: 12px;
+}
+.project-deleted-notice button {
+  text-decoration: underline;
+  cursor: pointer;
+  color: #305340;
+}
+.project-deleted-notice button:last-child {
+  margin-left: auto;
+  text-decoration: none;
+}
+.ohf .film-project-dialog {
+  margin: auto;
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  border: 1px solid #d9e1cd;
+  border-radius: 16px;
+  background: #fafbf5;
+  color: #1b3026;
+  box-shadow: 0 24px 90px #142b2540;
+}
+.ohf .film-project-dialog::backdrop {
+  background: #132b2577;
+  backdrop-filter: blur(5px);
+}
+.film-project-dialog form {
+  padding: 28px;
+}
+.film-project-dialog h2 {
+  font-size: 24px;
+  line-height: 1.35;
+  letter-spacing: -0.5px;
+  margin: 12px 0 22px;
+  overflow-wrap: anywhere;
+}
+.film-project-dialog label {
+  display: block;
+  font-size: 12px;
+}
+.film-project-dialog input {
+  display: block;
+  width: 100%;
+  border: 1px solid #ccd7c1;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 9px;
+  background: #fffffa;
+  font: inherit;
+}
+.film-project-dialog p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #697a60;
+}
+.project-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 25px;
+}
+.project-dialog-actions button {
+  padding: 11px 16px;
+  border: 1px solid #ccd7c1;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.project-dialog-actions .project-delete-confirm {
+  background: #924c40;
+  color: #fff;
+  border-color: #924c40;
+}
+.film-workbench .film-heading {
+  margin-bottom: 0;
+  gap: 22px;
+  align-items: center;
+}
+.film-workbench .studio-board-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 9px;
+}
+.film-workbench .film-mode-bar {
+  display: block;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 20px 0 28px;
+}
+.film-workbench .film-mode-bar nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.film-workbench .film-mode-bar nav button {
+  display: flex;
+  text-align: left;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #d6dfca;
+  border-radius: 12px;
+  background: #fafbf5;
+  color: #75846b;
+  min-height: 77px;
+}
+.film-workbench .film-mode-bar nav button[aria-current] {
+  background: #21472e;
+  border-color: #21472e;
+  color: #f2f6e7;
+  box-shadow: none;
+}
+.film-workbench .film-mode-bar nav button::after {
+  display: none;
+}
+.film-workbench .film-mode-bar .film-step-number {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  height: 30px;
+  width: 30px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font:
+    11px var(--font-ohf-inter),
+    sans-serif;
+  opacity: 0.8;
+}
+.film-workbench .film-mode-bar .film-step-label {
+  font-family: inherit;
+  opacity: 1;
+  min-width: 0;
+  color: inherit;
+}
+.film-step-label strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 550;
+}
+.film-step-label small {
+  display: block;
+  font-size: 10px;
+  line-height: 1.5;
+  margin-top: 5px;
+  opacity: 0.75;
+}
+.film-workbench .film-project-progress {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  font-size: 11px;
+}
+.film-stage-guide {
+  order: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+.film-stage-guide h2 {
+  margin: 9px 0 10px;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.9px;
+}
+.film-stage-guide p {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #74856a;
+  max-width: 720px;
+}
+.film-stage-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.film-stage-guide button,
+.film-next-review {
+  padding: 11px 15px;
+  border: 1px solid #cdd9c1;
+  border-radius: 8px;
+  background: #fafbf5;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.film-workbench .film-planner {
+  order: 4;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(270px, 1fr);
+  gap: 30px;
+  padding: 28px;
+  margin-bottom: 20px;
+  border: 1px solid #d4ddc8;
+  border-radius: 16px;
+}
+.film-story-input .film-label {
+  font-size: 13px;
+}
+.film-workbench .film-story-input textarea {
+  padding: 16px;
+  min-height: 245px;
+  font-size: 14px;
+  line-height: 1.85;
+  margin-top: 10px;
+  border-radius: 10px;
+}
+.film-workbench .film-story-input textarea::placeholder {
+  color: #98a18e;
+}
+.film-workbench .film-example {
+  margin-top: 12px;
+  padding: 5px 0;
+  color: #45643c;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  background: transparent;
+  border: 0;
+  font-size: 11px;
+}
+.film-plan-setup {
+  padding: 23px;
+  background: #edf1e3;
+  border: 1px solid #dce3cf;
+  border-radius: 12px;
+  min-width: 0;
+}
+.film-plan-numbers {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  margin: 16px 0 8px;
+}
+.film-plan-numbers strong {
+  font-size: 48px;
+  line-height: 1;
+  letter-spacing: -2px;
+  font-weight: 500;
+  color: #24492f;
+}
+.film-plan-numbers span {
+  font-size: 12px;
+  color: #6c7b60;
+}
+.film-plan-explanation {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #7c8a6d;
+  margin-bottom: 22px;
+}
+.film-plan-setup > .film-label {
+  margin-bottom: 18px;
+}
+.film-plan-options {
+  margin-bottom: 20px;
+  font-size: 11px;
+}
+.film-plan-options summary {
+  cursor: pointer;
+  padding: 9px 0;
+  color: #46603b;
+}
+.film-plan-options .film-settings-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 15px;
+}
+.film-plan-setup > .film-primary {
+  width: 100%;
+  min-height: 45px;
+  border-radius: 9px;
+  font-size: 12px;
+}
+.film-plan-free {
+  margin-top: 11px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #7a896a;
+}
+.film-plan-defaults {
+  font-size: 11px;
+  color: #47623a;
+  margin: 10px 0 14px;
+}
+.film-shot-scene {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: #7c8d6f;
+  font-size: 10px;
+  line-height: 1.6;
+  margin: 4px 0 7px;
+}
+.film-workbench .film-next-review:not(:disabled) {
+  background: #24492e;
+  border-color: #24492e;
+  color: #fff;
+  min-height: 42px;
+  font-weight: 500;
+}
+.film-workbench .film-generate-row {
+  order: 3;
+  margin: 0 0 20px;
+  padding: 16px;
+  align-self: stretch;
+  background: #e7eed9;
+  border: 1px solid #d4dfc7;
+  border-radius: 11px;
+  gap: 12px;
+}
+.film-workbench .film-generate-row > .film-primary {
+  min-height: 42px;
+}
+.film-workbench .film-generate-row .film-hint {
+  flex-basis: 100%;
+  line-height: 1.7;
+}
+.film-workbench > .film-intro {
+  order: 4;
+}
+.film-workbench > .film-notes {
+  order: 5;
+}
+.film-workbench > .film-timeline-caption {
+  order: 6;
+  margin-top: 0;
+}
+.film-workbench > .film-timeline {
+  order: 7;
+  margin-bottom: 20px;
+}
+.film-workbench > .film-editor {
+  order: 8;
+}
+.film-review-start {
+  order: 4;
+  align-self: center;
+  padding: 12px 18px;
+  border-radius: 8px;
+  margin: 16px;
+}
+.film-step-review .film-stage-guide .film-primary {
+  color: #fff;
+}
+@media (max-width: 1100px) {
+  .film-workbench .film-mode-bar nav button {
+    padding: 12px;
+    gap: 8px;
+  }
+  .film-step-label small {
+    font-size: 9px;
+  }
+  .film-workbench .film-planner {
+    gap: 22px;
+    padding: 22px;
+    grid-template-columns: minmax(0, 1.2fr) minmax(260px, 1fr);
+  }
+  .film-stage-guide {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+@media (max-width: 700px) {
+  .film-workbench .film-heading {
+    align-items: flex-start;
+  }
+  .film-workbench .studio-board-actions {
+    justify-content: flex-start;
+    gap: 9px;
+  }
+  .film-workbench .film-mode-bar {
+    margin: 22px 0;
+  }
+  .film-workbench .film-mode-bar nav {
+    gap: 6px;
+  }
+  .film-workbench .film-mode-bar nav button {
+    flex-direction: column;
+    gap: 8px;
+    padding: 13px 5px;
+    text-align: center;
+    min-height: 85px;
+  }
+  .film-workbench .film-mode-bar .film-step-number {
+    width: 25px;
+    height: 25px;
+    font-size: 9px;
+  }
+  .film-step-label strong {
+    font-size: 11px;
+  }
+  .film-step-label small {
+    display: none;
+  }
+  .film-workbench .film-planner {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 18px;
+    gap: 20px;
+  }
+  .film-workbench .film-story-input textarea {
+    min-height: 200px;
+  }
+  .film-plan-setup {
+    padding: 20px;
+  }
+  .film-stage-guide h2 {
+    font-size: 25px;
+  }
+  .film-stage-guide p {
+    font-size: 11px;
+  }
+  .film-workbench .film-generate-row {
+    padding: 13px;
+  }
+  .film-next-review {
+    padding: 11px;
+    font-size: 10px;
+  }
+  .project-deleted-notice {
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 11px;
+  }
+  .project-card-actions {
+    padding: 12px;
+  }
+  .film-project-dialog form {
+    padding: 23px;
+  }
+}

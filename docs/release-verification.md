@@ -1,11 +1,18 @@
 # Release verification
 
-## 2026-10-16 — Team workspace and spending controls
+## 2026-10-16 — Guided films, team workspace and spending controls
 
-- 33 unit/native-media tests and all 33 browser cases passed. Coverage includes
+- 34 unit/native-media tests and 35 browser cases passed across the full and focused runs. Coverage includes
   signed cost approvals, changed-input/replayed-approval rejection, server budget
   enforcement, account isolation, receipt recovery without another submission,
   canceling a film cost review, connected clips, editing and exports.
+- Film projects now have explicit rename/delete controls, confirmation and undo.
+  Regression checks cover preservation of other projects, deletion after reload,
+  safe active-board cleanup and preventing deletion of pending provider jobs.
+- The guided film flow was exercised from an empty story through its live clip
+  count, two sequential fixture generations with separate approvals, review,
+  MP4 export and mobile layout. The removed direction cards are absent. Fixture
+  storage transfer is replaced; ending-frame extraction and export run natively.
 - SQLite tests close and reopen the database to verify budget/receipt persistence.
   Type checking and the optimized standalone build passed without tracing warnings.
 - The production standalone server returned readiness 200 with native tools and
@@ -21,7 +28,7 @@
 - An existing real clip was inspected, split, crossfaded and exported into a
   playable 3.703-second 1280×720 H.264/AAC MP4. Evidence remains in ignored
   `artifacts/`, including workspace screenshots and film verification reports.
-- The configured provider credential was absent from 193 candidate source files;
+- The configured provider credential was absent from candidate source files;
   generated environment, SQLite and verification data are excluded from packaging.
 
 The latest pushed commit is checked separately by GitHub's Linux browser/build and

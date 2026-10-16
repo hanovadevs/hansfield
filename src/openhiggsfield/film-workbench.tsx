@@ -26,6 +26,7 @@ import type { RunRecord } from "./history";
 import { CloseIcon, PlusIcon, PlayBadgeIcon, DownloadIcon } from "./icons";
 import { FilmReview } from "./film-review";
 import { cancelGeneration } from "@/generation/client";
+import { FilmProjectDialog } from "./film-project-dialog";
 
 const VIDEO_MODELS = MODELS.filter(
   (m) =>
@@ -56,9 +57,12 @@ export function FilmWorkbench({
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [plannerOpen, setPlannerOpen] = useState(!board.shots.length);
+  const [projectDialog, setProjectDialog] = useState<
+    "rename" | "delete" | null
+  >(null);
   const story = board.story;
   const setStory = board.setStory;
-  const [target, setTarget] = useState(30);
+  const [target, setTarget] = useState(0);
   const [seconds, setSeconds] = useState(5);
   const [modelId, setModelId] = useState("seedance-2.5");
   const [mode, setMode] = useState<ContinuityMode>("frame");
@@ -89,6 +93,26 @@ export function FilmWorkbench({
   const importRef = useRef<HTMLInputElement>(null);
   const videoImportRef = useRef<HTMLInputElement>(null);
   const disabled = board.generating || !!working;
+  const scenes = story
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const plannedSeconds = durationFor(modelId, seconds);
+  const shotDurations = [
+    ...new Set([
+      plannedSeconds,
+      ...[1, 4, 5, 6, 8, 10, 15, 20, 30, 600].map((value) =>
+        durationFor(modelId, value),
+      ),
+    ]),
+  ].sort((a, b) => a - b);
+  const plannedCount = Math.max(
+    scenes.length,
+    Math.ceil((target || scenes.length * plannedSeconds) / plannedSeconds),
+  );
+  const currentProject = board.projects.find(
+    (project) => project.id === board.activeProjectId,
+  );
   const selected =
     board.shots.find((s) => s.id === selectedId) ?? board.shots[0];
   const selectedIndex = selected
@@ -268,9 +292,27 @@ export function FilmWorkbench({
             value={board.title}
             disabled={disabled}
             onChange={(e) => board.setTitle(e.target.value)}
+            onBlur={() => {
+              if (!board.title.trim()) board.setTitle("Untitled film");
+            }}
           />
         </div>
         <div className="studio-board-actions">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => setProjectDialog("rename")}
+          >
+            Rename project
+          </button>
+          <button
+            type="button"
+            className="project-delete"
+            disabled={disabled}
+            onClick={() => setProjectDialog("delete")}
+          >
+            Delete project
+          </button>
           <button
             type="button"
             aria-label="Undo film edit"
@@ -329,25 +371,89 @@ export function FilmWorkbench({
             <button
               key={id}
               type="button"
+              aria-label={`0${i + 1} ${id[0]!.toUpperCase() + id.slice(1)}`}
               aria-current={step === id ? "step" : undefined}
               onClick={() => {
                 setStep(id);
                 if (id === "story") setPlannerOpen(true);
               }}
             >
-              <span>0{i + 1}</span>
-              {id[0]!.toUpperCase() + id.slice(1)}
+              <span className="film-step-number">0{i + 1}</span>
+              <span className="film-step-label">
+                <strong>{id[0]!.toUpperCase() + id.slice(1)}</strong>
+                <small aria-hidden>
+                  {
+                    [
+                      "Write your scenes",
+                      "Generate connected clips",
+                      "Watch and refine",
+                      "Download your film",
+                    ][i]
+                  }
+                </small>
+              </span>
             </button>
           ))}
         </nav>
-        <span className="film-project-progress">
-          {completed.length}/{board.shots.length} ready{" "}
-          <i
-            style={{
-              width: `${board.shots.length ? (completed.length / board.shots.length) * 100 : 0}%`,
-            }}
-          />
-        </span>
+        {board.shots.length > 0 && (
+          <span className="film-project-progress">
+            {completed.length}/{board.shots.length} ready{" "}
+            <i
+              style={{
+                width: `${board.shots.length ? (completed.length / board.shots.length) * 100 : 0}%`,
+              }}
+            />
+          </span>
+        )}
+      </div>
+      <div className="film-stage-guide">
+        <div>
+          <span className="workspace-eyebrow">
+            STEP{" "}
+            {(["story", "shots", "review", "export"] as const).indexOf(step) +
+              1}{" "}
+            OF 4
+          </span>
+          <h2>
+            {
+              {
+                story: "What happens in your film?",
+                shots: "Bring each scene to life.",
+                review: "Watch your film, then refine it.",
+                export: "Your film, ready to share.",
+              }[step]
+            }
+          </h2>
+          <p>
+            {
+              {
+                story:
+                  "Write a scene on each line. We’ll turn them into a connected shot plan.",
+                shots:
+                  "Generate the clips in order. Review each cost before it starts; the next clip can use the previous ending.",
+                review:
+                  "Play the sequence from start to finish. Return to Shots to trim, split or regenerate a clip.",
+                export:
+                  "Choose your format and export an MP4. Only ready clips are included; exporting uses no generation credits.",
+              }[step]
+            }
+          </p>
+        </div>
+        {step === "review" && (
+          <div className="film-stage-actions">
+            <button onClick={() => setStep("shots")}>Edit clips</button>
+            <button
+              className="film-primary"
+              disabled={!completed.length || disabled}
+              onClick={() => setStep("export")}
+            >
+              Continue to export →
+            </button>
+          </div>
+        )}
+        {step === "export" && (
+          <button onClick={() => setStep("review")}>← Back to review</button>
+        )}
       </div>
       {surface === "video" && (
         <>
@@ -382,31 +488,66 @@ export function FilmWorkbench({
           </div>
           {plannerOpen && (
             <div className="film-planner">
-              <label className="film-label">
-                Your story
-                <textarea
-                  aria-label="Film story"
-                  rows={4}
-                  maxLength={20000}
-                  value={story}
-                  onChange={(e) => setStory(e.target.value)}
-                  placeholder={
-                    "A traveler follows a winding trail through the desert.\nShe reaches an ancient stone arch at sunset.\nShe steps through the arch into a hidden oasis."
-                  }
-                />
-              </label>
-              <p className="film-hint">
-                One scene per line. Longer scenes are spread across connected
-                shots. You can refine every shot afterward.
-              </p>
-              <div className="film-settings-row">
+              <div className="film-story-input">
                 <label className="film-label">
-                  Target length
+                  Your scenes
+                  <textarea
+                    aria-label="Film story"
+                    disabled={disabled}
+                    rows={6}
+                    maxLength={20000}
+                    value={story}
+                    onChange={(e) => setStory(e.target.value)}
+                    placeholder={
+                      "Describe the opening scene…\nThen describe what happens next…\nFinish with the final moment."
+                    }
+                  />
+                </label>
+                <p className="film-hint">
+                  One line = one scene. Be specific about the subject, action
+                  and setting.
+                </p>
+                <button
+                  type="button"
+                  className="film-example"
+                  disabled={disabled}
+                  onClick={() =>
+                    setStory(
+                      "A traveler finds a hidden trail in a misty forest.\nShe follows a warm light between the trees.\nThe trail opens onto a moonlit lake.",
+                    )
+                  }
+                >
+                  Use a short example
+                </button>
+              </div>
+              <div className="film-plan-setup">
+                <span className="workspace-eyebrow">YOUR SHOT PLAN</span>
+                <div className="film-plan-numbers">
+                  <strong>{scenes.length ? plannedCount : "—"}</strong>
+                  <span>
+                    {plannedCount === 1 ? "clip" : "clips"}
+                    {scenes.length
+                      ? ` · about ${plannedCount * plannedSeconds} seconds`
+                      : " · write your first scene"}
+                  </span>
+                </div>
+                <p className="film-plan-defaults">
+                  {getModel(modelId).label} · {plannedSeconds}s per clip
+                </p>
+                <p className="film-plan-explanation">
+                  {mode === "none"
+                    ? "Each clip is an independent scene."
+                    : "The first clip sets the scene. Following clips use the previous ending to continue the action."}
+                </p>
+                <label className="film-label">
+                  Film length
                   <select
                     aria-label="Target film length"
                     value={target}
-                    onChange={(e) => setTarget(Number(e.target.value))}
+                    disabled={disabled}
+                    onChange={(event) => setTarget(Number(event.target.value))}
                   >
+                    <option value={0}>Fit my scenes · one clip per line</option>
                     {[10, 20, 30, 60, 90, 120, 180, 300, 600].map((n) => (
                       <option key={n} value={n}>
                         {n < 60 ? `${n} seconds` : `${n / 60} minutes`}
@@ -414,92 +555,110 @@ export function FilmWorkbench({
                     ))}
                   </select>
                 </label>
-                <label className="film-label">
-                  Shot length
-                  <select
-                    aria-label="Planned shot length"
-                    value={seconds}
-                    onChange={(e) => setSeconds(Number(e.target.value))}
-                  >
-                    {[4, 5, 6, 8, 10, 15, 20, 30].map((n) => (
-                      <option key={n} value={n}>
-                        {n} seconds
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="film-label">
-                  Model
-                  <select
-                    aria-label="Film generation model"
-                    value={modelId}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      setModelId(id);
-                      setMode(
-                        getModel(id).roles.start
-                          ? "frame"
-                          : getModel(id).roles.video
-                            ? "video"
-                            : "none",
-                      );
-                    }}
-                  >
-                    {VIDEO_MODELS.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="film-label">
-                  Connect shots
-                  <select
-                    aria-label="Planned continuity"
-                    value={mode}
-                    onChange={(e) => setMode(e.target.value as ContinuityMode)}
-                  >
-                    <option value="none">Independent scenes</option>
-                    <option
-                      value="frame"
-                      disabled={!getModel(modelId).roles.start}
-                    >
-                      Last kept frame
-                    </option>
-                    <option
-                      value="video"
-                      disabled={!getModel(modelId).roles.video}
-                    >
-                      Previous video
-                    </option>
-                  </select>
-                </label>
-              </div>
-              <button
-                type="button"
-                className="film-primary"
-                disabled={disabled || !story.trim()}
-                onClick={() => {
-                  try {
-                    const shots = planShots(
-                      story,
-                      modelId,
-                      target,
-                      seconds,
-                      mode,
-                    );
-                    board.append(shots);
-                    setSelectedId(shots[0]!.id);
-                    setPlannerOpen(false);
-                    setStep("shots");
-                    setNotice(`${shots.length} shots added.`);
-                  } catch (e) {
-                    onError((e as Error).message);
+                <details className="film-plan-options">
+                  <summary>Model & clip settings</summary>
+                  <div className="film-settings-row">
+                    <label className="film-label">
+                      Shot length
+                      <select
+                        aria-label="Planned shot length"
+                        value={plannedSeconds}
+                        onChange={(e) => setSeconds(Number(e.target.value))}
+                      >
+                        {shotDurations.map((n) => (
+                          <option key={n} value={n}>
+                            {n} seconds
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="film-label">
+                      Model
+                      <select
+                        aria-label="Film generation model"
+                        value={modelId}
+                        onChange={(e) => {
+                          const id = e.target.value;
+                          setModelId(id);
+                          setMode(
+                            getModel(id).roles.start
+                              ? "frame"
+                              : getModel(id).roles.video
+                                ? "video"
+                                : "none",
+                          );
+                        }}
+                      >
+                        {VIDEO_MODELS.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="film-label">
+                      Connect shots
+                      <select
+                        aria-label="Planned continuity"
+                        value={mode}
+                        onChange={(e) =>
+                          setMode(e.target.value as ContinuityMode)
+                        }
+                      >
+                        <option value="none">Independent scenes</option>
+                        <option
+                          value="frame"
+                          disabled={!getModel(modelId).roles.start}
+                        >
+                          Last kept frame
+                        </option>
+                        <option
+                          value="video"
+                          disabled={!getModel(modelId).roles.video}
+                        >
+                          Previous video
+                        </option>
+                      </select>
+                    </label>
+                  </div>
+                </details>
+                <button
+                  type="button"
+                  className="film-primary"
+                  aria-label="Create shot plan"
+                  disabled={
+                    disabled ||
+                    !story.trim() ||
+                    plannedCount + board.shots.length > 40
                   }
-                }}
-              >
-                Create shot plan
-              </button>
+                  onClick={() => {
+                    try {
+                      const shots = planShots(
+                        story,
+                        modelId,
+                        target || scenes.length * plannedSeconds,
+                        seconds,
+                        mode,
+                      );
+                      board.append(shots);
+                      setSelectedId(shots[0]!.id);
+                      setPlannerOpen(false);
+                      setStep("shots");
+                      setNotice(`${shots.length} shots added.`);
+                    } catch (e) {
+                      onError((e as Error).message);
+                    }
+                  }}
+                >
+                  {board.shots.length ? "Add" : "Create"}{" "}
+                  {scenes.length ? `${plannedCount}-clip ` : ""}shot plan →
+                </button>
+                <p className="film-plan-free">
+                  {plannedCount + board.shots.length > 40
+                    ? "A project supports up to 40 shots. Shorten the plan or increase the clip length."
+                    : "Planning is free. You approve the cost when generating each clip."}
+                </p>
+              </div>
             </div>
           )}
           <details className="film-notes">
@@ -608,6 +767,9 @@ export function FilmWorkbench({
                       )}
                     </span>
                     <strong>{shot.title}</strong>
+                    <p className="film-shot-scene">
+                      {shot.plane.prompt.text.split("\n")[0]}
+                    </p>
                     <span>
                       {shot.job
                         ? shot.job.phase.replace(/_/g, " ")
@@ -712,10 +874,18 @@ export function FilmWorkbench({
                   <span aria-hidden>↗</span>
                 </button>
               )}
+              <button
+                type="button"
+                className="film-next-review"
+                disabled={!completed.length || disabled}
+                onClick={() => setStep("review")}
+              >
+                Continue to review →
+              </button>
               <p className="film-hint">
                 {board.generating
                   ? "Shots run in order so the next one can use the previous result. Keep this tab open; accepted requests recover after refresh."
-                  : "One paid request per shot. Changed connections regenerate."}
+                  : `${completed.length} of ${board.shots.length} clips ready. Generate individually below, or run the remaining clips in order.`}
               </p>
             </div>
           )}
@@ -727,15 +897,23 @@ export function FilmWorkbench({
           </span>
           <div>
             <strong>Build a story, one shot at a time.</strong>
-            <p>
-              Plan a video, add existing footage, or save a scene from the
-              composer.
-            </p>
+            <p>Write your scenes first, or upload an existing video.</p>
           </div>
         </div>
       )}
       {step === "review" && (
-        <FilmReview key={board.activeProjectId} shots={board.shots} />
+        <>
+          <FilmReview key={board.activeProjectId} shots={board.shots} />
+          {!completed.length && (
+            <button
+              className="film-review-start film-primary"
+              onClick={() => setStep(board.shots.length ? "shots" : "story")}
+            >
+              {board.shots.length ? "Generate your clips" : "Write your scenes"}{" "}
+              →
+            </button>
+          )}
+        </>
       )}
       {step === "export" && !completed.length && (
         <div className="review-empty">
@@ -966,6 +1144,14 @@ export function FilmWorkbench({
         <p className="film-shot-error" role="alert">
           {actionError}
         </p>
+      )}
+      {projectDialog && currentProject && (
+        <FilmProjectDialog
+          project={currentProject}
+          mode={projectDialog}
+          onClose={() => setProjectDialog(null)}
+          onDeleted={onBack}
+        />
       )}
       <input
         type="file"

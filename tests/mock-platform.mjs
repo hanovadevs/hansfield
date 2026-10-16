@@ -56,6 +56,7 @@ http
     }
     if (!["Key test:secret", "Key customer:second"].includes(req.headers.authorization))
       return json(res, 401, { detail: "Invalid credentials" });
+    if(path.startsWith("/estimate/")) return json(res,200,{type:"estimate",usd:"0.05",credits:"1.0",discount:null});
     if (path === "/files/generate-upload-url") return json(res, 200, {
       upload_url: "https://fixture.cloudfront.net/unused-upload", public_url: "https://fixture.cloudfront.net/unused-reference.png", upload_headers: {},
     });

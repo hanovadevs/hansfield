@@ -89,8 +89,12 @@ test("one API account cannot query or cancel another account's generated job", a
   context,
   browser,
 }) => {
+  const plane={model:"cinema-4",prompt:{text:"A quiet scene."},media:{},settings:{}};
+  const quote=await context.request.post("/api/generations/estimate",{data:{plane}});
+  const approval=(await quote.json()).token;
   const result = await context.request.post("/api/generations", {
     data: {
+      approval,
       idempotencyKey: crypto.randomUUID(),
       plane: {
         model: "cinema-4",

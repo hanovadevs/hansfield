@@ -6,6 +6,7 @@ import { BRAND_MARK } from "@/brand";
 import { hasPlatformCredentials } from "@/generation/actions";
 import {
   submitGeneration,
+  authorizeGeneration,
   cancelGeneration,
   GenerationRequestError,
 } from "@/generation/client";
@@ -28,6 +29,9 @@ import { generateFilm } from "@/film/generate";
 import { useStoryboard } from "@/generation/stores/storyboard";
 import { FilmProjects } from "./film-projects";
 import { FilmWorkbench } from "./film-workbench";
+import { CostReview } from "./cost-review";
+import { UsageCenter } from "./usage-center";
+import { ToolSearch } from "./tool-search";
 
 import { GRAIN_URI, artFor } from "./artwork";
 import {
@@ -241,6 +245,8 @@ export function OpenHiggsfieldApp({
   const [saving, setSaving] = useState<SaveProgress | null>(null);
   const [keyConfigured, setKeyConfigured] = useState(initialKeyConfigured);
   const [keysOpen, setKeysOpen] = useState(false);
+  const [usageOpen,setUsageOpen]=useState(false);
+  const [toolsOpen,setToolsOpen]=useState(false);
   const [workspace, setWorkspace] = useState<"studio" | "films">("studio");
   const [filmOpen, setFilmOpen] = useState(false);
   const [advancedShot, setAdvancedShot] = useState<string | null>(null);
@@ -259,6 +265,7 @@ export function OpenHiggsfieldApp({
       }
       if (id && board.activeProjectId !== id) board.openProject(id);
       setWorkspace(next);
+      setUsageOpen(false);
       setFilmOpen(!!id);
       setAdvancedShot(null);
       setError(null);
@@ -283,6 +290,7 @@ export function OpenHiggsfieldApp({
       }
       const next =
         url.searchParams.get("workspace") === "films" ? "films" : "studio";
+      setUsageOpen(url.searchParams.get("workspace")==="usage");
       const id = url.searchParams.get("project");
       setWorkspace(next);
       setAdvancedShot(null);
@@ -614,6 +622,9 @@ export function OpenHiggsfieldApp({
     const expected = native
       ? Math.max(1, Number(plane.settings[native.key]) || 1)
       : useActive.getState().batch;
+    let approval: import("@/generation/pricing").SpendQuote;
+    try { approval=await authorizeGeneration(plane,native?1:expected,`${expected} ${entry.surface === "video" ? "video" : "image"}${expected>1?"s":""}`); }
+    catch(error) { submitting.current=false;setError(describeError(error));return; }
     const startedAt = Date.now();
     const seq = ++press.current;
     const pending: ActiveRun[] = Array.from(
@@ -663,7 +674,7 @@ export function OpenHiggsfieldApp({
       }));
       setHistory((prev) => [...temporary, ...prev]);
       try {
-        const queued = await submitGeneration(plane, idempotencyKey);
+        const queued = await submitGeneration(plane, idempotencyKey, approval);
         const acceptedDraft = { ...draft, statusUrl: queued.statusUrl };
         setHistory((prev) => {
           const next = [
@@ -1018,6 +1029,12 @@ export function OpenHiggsfieldApp({
   const openViewer = useCallback((id: string) => setViewerId(id), []);
   const openKeys = useCallback(() => setKeysOpen(true), []);
   const runGenerate = useCallback(() => generate(), [generate]);
+  const openUsage=()=>{
+    if(projectBusy)return;
+    setUsageOpen(true);setAdvancedShot(null);
+    const url=new URL(window.location.href);url.searchParams.set("workspace","usage");url.searchParams.delete("project");window.history.pushState(null,"",url);
+  };
+  useEffect(()=>{const handle=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="k"){event.preventDefault();if(!projectBusy)setToolsOpen(open=>!open);}};window.addEventListener("keydown",handle);return()=>window.removeEventListener("keydown",handle);},[projectBusy]);
   const downloadSelection = useCallback(
     () => void downloadPicked(),
     [downloadPicked],
@@ -1072,8 +1089,11 @@ export function OpenHiggsfieldApp({
             workspace={workspace}
             onFilms={() => navigateWorkspace("films")}
             navigationDisabled={projectBusy}
+            usageOpen={usageOpen}
+            onUsage={openUsage}
+            onTools={()=>setToolsOpen(true)}
           />
-          {workspace === "films" ? (
+          {usageOpen ? <UsageCenter history={history} onConnect={openKeys}/> : workspace === "films" ? (
             <div className="film-workspace-shell">
               {filmOpen && projectId ? (
                 <FilmWorkbench
@@ -1261,6 +1281,16 @@ export function OpenHiggsfieldApp({
           )}
         </main>
 
+        <CostReview/>
+        {toolsOpen&&<ToolSearch onClose={()=>setToolsOpen(false)} actions={[
+          {name:"Create a video",detail:"Studio · prompt, references and camera controls",run:()=>{navigateWorkspace("studio");switchView("video");}},
+          {name:"Create an image",detail:"Image studio · campaign visuals and reference frames",run:()=>{navigateWorkspace("studio");switchView("image");}},
+          {name:"New film project",detail:"Plan shots, connect clips, edit and export",run:()=>{const id=useStoryboard.getState().createProject();navigateWorkspace("films",id);}},
+          {name:"Open film projects",detail:"Continue a story or make an alternate cut",run:()=>navigateWorkspace("films")},
+          {name:"Open media library",detail:"Search, reuse and download creations",run:()=>{navigateWorkspace("studio");switchView("assets");}},
+          {name:"Review costs and budgets",detail:"Usage · request journal and spending controls",run:openUsage},
+          {name:"Manage API connection",detail:"Connect, replace or disconnect your own key",run:openKeys},
+        ]}/>}
         {viewerItem && (
           <Viewer
             item={viewerItem}

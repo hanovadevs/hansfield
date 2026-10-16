@@ -1,5 +1,7 @@
 import type { GenerationPlane } from "./catalog";
 import type { QueuedGeneration, StatusResult } from "./platform";
+import type { SpendQuote } from "./pricing";
+import { reviewSpend } from "./spend-review";
 
 export class GenerationRequestError extends Error {
   constructor(
@@ -29,14 +31,31 @@ export async function generationRequest<T>(
   return data as T;
 }
 
-export const submitGeneration = (
+export async function estimateGeneration(plane:GenerationPlane,count=1):Promise<SpendQuote> {
+  return generationRequest<SpendQuote>("/api/generations/estimate",{plane,count});
+}
+export async function authorizeGeneration(plane:GenerationPlane,count=1,label="Generation"):Promise<SpendQuote> {
+  const quote=await estimateGeneration(plane,count);
+  await reviewSpend(quote,label);
+  return quote;
+}
+
+export const submitGeneration = async (
   plane: GenerationPlane,
   idempotencyKey: string,
-) =>
-  generationRequest<QueuedGeneration>("/api/generations", {
+  approved?: SpendQuote,
+) => {
+  const response=await fetch(`/api/usage?intent=${encodeURIComponent(idempotencyKey)}`,{cache:"no-store"});
+  const previous=response.ok?await response.json():null;
+  if(previous?.entry?.receipt)return previous.entry.receipt as QueuedGeneration;
+  const recovering=previous?.entry?.state==="uncertain";
+  const quote=recovering?undefined:approved??await authorizeGeneration(plane,1,"Generate this shot");
+  return generationRequest<QueuedGeneration>("/api/generations", {
     plane,
     idempotencyKey,
+    approval:quote?.token,
   });
+};
 export const getGenerationStatuses = (
   requests: { requestId: string; statusUrl?: string }[],
 ) => generationRequest<StatusResult[]>("/api/generations/status", { requests });

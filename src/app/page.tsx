@@ -8,6 +8,7 @@ import "@/openhiggsfield/openhiggsfield.css";
 import "@/openhiggsfield/studio.css";
 import "@/openhiggsfield/film.css";
 import "@/openhiggsfield/experience.css";
+import "@/openhiggsfield/team-workspace.css";
 
 const inter = Inter({
   subsets: ["latin"],

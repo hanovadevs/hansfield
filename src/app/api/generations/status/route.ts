@@ -6,6 +6,8 @@ import {
   readJsonBody,
 } from "@/server/request-guard";
 import { routeError } from "@/server/route-error";
+import { credentialIdentity } from "@/server/request-guard";
+import { updateUsageState } from "@/server/usage-ledger";
 
 export const maxDuration = 60;
 
@@ -37,9 +39,11 @@ export async function POST(request: Request) {
     const results = await Promise.all(
       requests.map(async ({ requestId, statusUrl }) => {
         try {
+          const status=await client.status(requestId,statusUrl);
+          updateUsageState(credentialIdentity(credentials.apiKey),requestId,status.status);
           return {
             requestId,
-            status: await client.status(requestId, statusUrl),
+            status,
           };
         } catch (error) {
           return {

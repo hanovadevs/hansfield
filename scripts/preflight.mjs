@@ -1,4 +1,4 @@
-import { access } from "node:fs/promises";
+import { access, mkdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -36,6 +36,9 @@ export async function preflight() {
   await access(process.env.FFMPEG_PATH || ffmpeg, constants.X_OK);
   await access(process.env.FFPROBE_PATH || ffprobe.path, constants.X_OK);
   await access(tmpdir(), constants.W_OK);
+  const dataDirectory=resolve(process.env.JENERA_DATA_DIR||"data");
+  await mkdir(dataDirectory,{recursive:true});
+  await access(dataDirectory,constants.W_OK);
   if (
     mode === "byok" &&
     (process.env.HF_API_KEY || process.env.HF_CREDENTIALS || process.env.HF_KEY)

@@ -29,6 +29,7 @@ import {
 import { CloseIcon, PlusIcon, PlayBadgeIcon, DownloadIcon } from "./icons";
 import { fileNameFor, saveFile } from "./download";
 import type { RunRecord } from "./history";
+import { PricePreview } from "./price-preview";
 
 const GUIDES: Record<string, { tag: string; text: string }> = {
   "cinema-4": {
@@ -143,6 +144,9 @@ export function StudioHeader({
   workspace = "studio",
   onFilms,
   navigationDisabled = false,
+  onUsage,
+  usageOpen=false,
+  onTools,
 }: {
   view: GalleryView;
   onView: (view: GalleryView) => void;
@@ -152,6 +156,9 @@ export function StudioHeader({
   workspace?: "studio" | "films";
   onFilms?: () => void;
   navigationDisabled?: boolean;
+  onUsage?:()=>void;
+  usageOpen?:boolean;
+  onTools?:()=>void;
 }) {
   return (
     <header className="studio-header">
@@ -165,6 +172,8 @@ export function StudioHeader({
         />
         <span className="jenera-wordmark">{BRAND_NAME}</span>
       </a>
+      <button type="button" className="workspace-search-button" onClick={onTools} disabled={navigationDisabled}><span>Search tools</span><kbd>⌘ K</kbd></button>
+      <span className="rail-section-label">WORKSPACE</span>
       <nav className="studio-navigation" aria-label="Workspace">
         {(["video", "assets", "favorites"] as GalleryView[]).map((id) => (
           <button
@@ -173,7 +182,7 @@ export function StudioHeader({
             type="button"
             disabled={navigationDisabled}
             aria-current={
-              workspace === "studio" &&
+              !usageOpen && workspace === "studio" &&
               (view === id || (id === "video" && view === "image"))
                 ? "page"
                 : undefined
@@ -193,12 +202,13 @@ export function StudioHeader({
         <button
           type="button"
           className="nav-films"
-          aria-current={workspace === "films" ? "page" : undefined}
+          aria-current={!usageOpen && workspace === "films" ? "page" : undefined}
           disabled={navigationDisabled}
           onClick={onFilms}
         >
           Films
         </button>
+        <button type="button" disabled={navigationDisabled} onClick={onUsage} aria-current={usageOpen?"page":undefined}>Usage</button>
       </nav>
       <a className="studio-help" href="/help" target="_blank" rel="noreferrer">
         Help
@@ -210,6 +220,7 @@ export function StudioHeader({
         {keyConfigured ? "Higgsfield connected" : "Connect Higgsfield"}
         {busy && <span className="studio-working">Working</span>}
       </button>
+      <div className="rail-account-note">Your key. Your projects.</div>
     </header>
   );
 }
@@ -624,6 +635,7 @@ export function StudioComposer({
         {tray.input}
       </div>
       <div className="studio-submit-area">
+        {!filmShotId&&<PricePreview fingerprint={JSON.stringify([model.id,values,prompt.text,tray.items,batch])}/>}
         {notice}
         {error && (
           <div className="studio-error" role="alert">

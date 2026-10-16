@@ -15,6 +15,7 @@ export class PlatformError extends Error {
 }
 
 export type QueuedGeneration = {
+  correlationId?: string;
   status: string;
   requestId: string;
   statusUrl: string;
@@ -49,6 +50,7 @@ export function createPlatformClient(options: PlatformClientOptions) {
   const baseUrl = options.baseUrl.replace(/\/$/, "");
   const fetchImpl = options.fetch ?? fetch;
   const auth = toAuthorizationHeader(options.apiKey);
+  let correlationId: string | undefined;
 
   async function send(
     method: "GET" | "POST",
@@ -73,11 +75,16 @@ export function createPlatformClient(options: PlatformClientOptions) {
     });
 
     const payload = await readJson(response);
+    correlationId = response.headers.get("X-Correlation-ID") ?? undefined;
     if (!response.ok) throw new PlatformError(response.status, payload);
     return payload;
   }
 
   return {
+    async estimate(model:string,input:Record<string,unknown>):Promise<unknown> {
+      if(!isModelId(model)) throw new PlatformError(400,{detail:"Invalid model"});
+      return send("POST", `/estimate/${model}`, input);
+    },
     async submit(
       model: string,
       input: Record<string, unknown>,
@@ -87,9 +94,10 @@ export function createPlatformClient(options: PlatformClientOptions) {
         throw new PlatformError(400, { detail: "Invalid model" });
       for (let attempt = 0; ; attempt++) {
         try {
-          return mapQueued(
+          const result = mapQueued(
             await send("POST", `/${model}`, input, idempotencyKey),
           );
+          return {...result,...(correlationId?{correlationId}:{})};
         } catch (error) {
           if (
             attempt >= 1 ||

@@ -6,14 +6,14 @@
   "type": "module",
   "packageManager": "pnpm@12.5.1",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "node scripts/build.mjs",
     "start": "node scripts/start.mjs",
     "check": "tsc --noEmit",
-    "test": "tsx --test tests/generation.test.ts tests/film.test.ts tests/security.test.ts",
+    "test": "tsx --test tests/generation.test.ts tests/film.test.ts tests/security.test.ts tests/pricing.test.ts",
     "test:e2e": "playwright test",
     "models:sync": "node scripts/sync-model-schemas.mjs",
     "brand": "node scripts/build-brand-assets.mjs",

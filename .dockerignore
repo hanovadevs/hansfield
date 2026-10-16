@@ -3,6 +3,8 @@ node_modules
 .git
 .env*
 artifacts
+data
+*.sqlite*
 test-results
 playwright-report
 *.tsbuildinfo

@@ -4,6 +4,8 @@ import snapshot from "../src/generation/catalog/api-schemas.json" with { type: "
 
 const jobs = new Map();
 const intents = new Map();
+const storage = new Map();
+let storageMode = "retry-once";
 const origin = "http://127.0.0.1:4319";
 const json = (res, status, body) => {
   res.writeHead(status, {
@@ -16,6 +18,29 @@ http
   .createServer(async (req, res) => {
     const path = new URL(req.url, origin).pathname;
     if (path === "/health") return json(res, 200, { ok: true });
+    if (path.startsWith("/storage/")) {
+      const token = path.slice("/storage/".length);
+      const slot = storage.get(token);
+      if (
+        !slot ||
+        req.method !== "PUT" ||
+        req.headers.authorization ||
+        req.headers["x-fixture-tag"] !== token ||
+        req.headers["content-type"] !== slot.contentType
+      )
+        return json(res, 403, { error: "Invalid signed storage request" });
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      slot.attempts++;
+      slot.bytes = Buffer.concat(chunks);
+      if (storageMode === "fail")
+        return json(res, 503, { error: "Storage unavailable" });
+      if (storageMode === "retry-once" && slot.attempts === 1)
+        return req.socket.destroy();
+      slot.uploaded = true;
+      res.writeHead(200);
+      return res.end();
+    }
     if (path === "/media/image.svg") {
       res.writeHead(200, {
         "Content-Type": "image/svg+xml",
@@ -54,16 +79,61 @@ http
         return json(res, 404, { error: "Missing preview fixture" });
       }
     }
-    if (!["Key test:secret", "Key customer:second"].includes(req.headers.authorization))
+    if (
+      !["Key test:secret", "Key customer:second"].includes(
+        req.headers.authorization,
+      )
+    )
       return json(res, 401, { detail: "Invalid credentials" });
-    if(path.startsWith("/estimate/")) return json(res,200,{type:"estimate",usd:"0.05",credits:"1.0",discount:null});
-    if (path === "/files/generate-upload-url") return json(res, 200, {
-      upload_url: "https://fixture.cloudfront.net/unused-upload", public_url: "https://fixture.cloudfront.net/unused-reference.png", upload_headers: {},
-    });
+    if (path === "/test/storage") {
+      if (req.method === "POST") {
+        let raw = "";
+        for await (const chunk of req) raw += chunk;
+        storageMode = JSON.parse(raw).mode;
+      }
+      return json(res, 200, {
+        mode: storageMode,
+        slots: [...storage.values()]
+          .filter((slot) => slot.owner === req.headers.authorization)
+          .map((slot) => ({
+            publicUrl: slot.publicUrl,
+            attempts: slot.attempts,
+            uploaded: !!slot.uploaded,
+            bytes: slot.bytes?.length ?? 0,
+            jpeg: slot.bytes?.readUInt16BE(0) === 0xffd8,
+          })),
+      });
+    }
+    if (path.startsWith("/estimate/"))
+      return json(res, 200, {
+        type: "estimate",
+        usd: "0.05",
+        credits: "1.0",
+        discount: null,
+      });
+    if (path === "/files/generate-upload-url") {
+      let raw = "";
+      for await (const chunk of req) raw += chunk;
+      const contentType = JSON.parse(raw).content_type;
+      const token = crypto.randomUUID();
+      const publicUrl = `https://fixture.cloudfront.net/uploaded/${token}`;
+      storage.set(token, {
+        owner: req.headers.authorization,
+        contentType,
+        publicUrl,
+        attempts: 0,
+      });
+      return json(res, 200, {
+        upload_url: `${origin}/storage/${token}`,
+        public_url: publicUrl,
+        upload_headers: { "Content-Type": contentType, "x-fixture-tag": token },
+      });
+    }
     const match = /^\/requests\/([^/]+)\/(status|cancel)$/.exec(path);
     if (match) {
       const job = jobs.get(match[1]);
-      if (!job || job.owner !== req.headers.authorization) return json(res, 404, { detail: "Not found" });
+      if (!job || job.owner !== req.headers.authorization)
+        return json(res, 404, { detail: "Not found" });
       if (match[2] === "cancel") {
         job.canceled = true;
         res.writeHead(202);

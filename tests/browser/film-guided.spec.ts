@@ -68,13 +68,6 @@ test("projects can be renamed, deleted with confirmation, restored and remain de
 test("guided film creation explains the plan and leads from scenes through generation to a playable export", async ({
   page,
 }) => {
-  // The fixture's signed-storage host is deliberately non-routable. Native
-  // ending-frame extraction still runs; only the storage transfer is replaced.
-  await page.route("**/api/upload", (route) =>
-    route.fulfill({
-      json: { url: "https://fixture.cloudfront.net/guided-continuity.jpg" },
-    }),
-  );
   await page.goto("/?workspace=films");
   await page.getByRole("button", { name: "+ New film", exact: true }).click();
   await expect(

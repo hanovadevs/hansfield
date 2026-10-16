@@ -7,6 +7,8 @@ import path from "node:path";
 import ffmpegPath from "ffmpeg-static";
 import ffprobe from "ffprobe-static";
 import type { Clip, Cut } from "./types";
+import { fetchTransfer } from "@/server/fetch-transfer";
+import { RequestGuardError } from "@/server/request-guard";
 
 const MAX_FILE = 100 * 1024 * 1024;
 const MAX_TOTAL = 500 * 1024 * 1024;
@@ -202,11 +204,18 @@ async function download(raw: string, file: string): Promise<number> {
   let url = validateMediaUrl(raw);
   let response: Response | undefined;
   for (let i = 0; i < 4; i++) {
-    response = await fetch(url, {
-      redirect: "manual",
-      signal: AbortSignal.timeout(60000),
-      cache: "no-store",
-    });
+    try {
+      response = await fetchTransfer(
+        url,
+        { redirect: "manual", cache: "no-store" },
+        60000,
+      );
+    } catch {
+      throw new RequestGuardError(
+        "Could not download the previous clip from the media host after retrying. Retry, or upload a saved copy if its provider URL has expired.",
+        502,
+      );
+    }
     if (response.status >= 300 && response.status < 400) {
       const next = response.headers.get("location");
       await response.body?.cancel();
@@ -245,6 +254,14 @@ async function download(raw: string, file: string): Promise<number> {
   } catch (error) {
     output.destroy();
     await reader.cancel().catch(() => {});
+    if (
+      error instanceof TypeError ||
+      (error instanceof Error && error.name === "TimeoutError")
+    )
+      throw new RequestGuardError(
+        "The media host interrupted the clip download. Retry this shot, or upload a saved copy of the clip.",
+        502,
+      );
     throw error;
   }
   return total;

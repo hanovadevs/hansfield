@@ -15,6 +15,10 @@ export async function mediaRequest(operation: Operation): Promise<Response> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(operation),
     signal: AbortSignal.timeout(300000),
+  }).catch(() => {
+    throw new Error(
+      "Could not reach the video processor. Check your connection and retry this shot.",
+    );
   });
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
@@ -47,8 +51,12 @@ export async function uploadReference(
     method: "POST",
     body: form,
     signal: AbortSignal.timeout(60000),
+  }).catch(() => {
+    throw new Error(
+      "Could not reach the reference uploader. Check your connection and retry this shot.",
+    );
   });
-  const data = await response.json();
+  const data = await response.json().catch(() => ({}));
   if (!response.ok || typeof data.url !== "string")
     throw new Error(data.error || "Could not upload continuity reference.");
   return data.url;

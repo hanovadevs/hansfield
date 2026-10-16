@@ -2,6 +2,10 @@
 
 ## Unreleased — Team workspace and spending controls
 
+- Retry transient clip downloads and signed reference uploads once, preserve
+  signed headers and transfer bytes, and identify connection/clip/storage failure
+  stages. Stop before paid submission when continuity preparation fails; cover
+  the Grok connected-shot flow through the actual upload route and storage fixture.
 - Expose the Studio's model-specific video controls directly on each film shot,
   including audio, camera/lens, lighting, pacing and style where supported. Share
   field controls with Studio, preserve per-shot settings and adapt to input mode.

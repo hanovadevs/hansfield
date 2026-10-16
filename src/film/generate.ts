@@ -120,7 +120,17 @@ export async function generateFilmShot(
             throw new Error(
               "Finish the previous shot before generating this continuation.",
             );
-          reference = await referenceFor(previous, mode);
+          try {
+            reference = await referenceFor(previous, mode);
+          } catch (error) {
+            const reason =
+              error instanceof Error
+                ? error.message
+                : "Reference preparation failed.";
+            throw new Error(
+              `Could not prepare shot ${index}'s ${mode === "frame" ? "final frame" : "video reference"}. ${reason} The next shot was not submitted.`,
+            );
+          }
           job.sourceSignature = signatureOf(previous, mode);
         }
         job.plane = validatePlane(

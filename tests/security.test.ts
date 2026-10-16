@@ -13,6 +13,100 @@ import {
   RequestGuardError,
 } from "../src/server/request-guard";
 import { parseCredentialInput } from "../src/generation/credentials";
+import { fetchTransfer } from "../src/server/fetch-transfer";
+import { uploadToProvider } from "../src/server/provider-upload";
+
+test("storage transfers retry a network failure with the same signed headers and bytes, without sending the API key", async () => {
+  let puts = 0;
+  let slots = 0;
+  const bytes = new Uint8Array([255, 216, 255, 217]);
+  const fetchImpl: typeof fetch = async (url, init) => {
+    if (String(url).endsWith("generate-upload-url")) {
+      slots++;
+      assert.equal(
+        new Headers(init?.headers).get("Authorization"),
+        "Key test:secret",
+      );
+      return Response.json({
+        upload_url: "https://storage.example/frame?signature=private",
+        public_url: "https://cdn.example/frame.jpg",
+        upload_headers: {
+          "Content-Type": "image/jpeg",
+          "x-amz-tagging": "signed-tag",
+        },
+      });
+    }
+    puts++;
+    assert.equal(init?.method, "PUT");
+    const headers = new Headers(init?.headers);
+    assert.equal(headers.has("Authorization"), false);
+    assert.equal(headers.get("x-amz-tagging"), "signed-tag");
+    assert.deepEqual(new Uint8Array(init?.body as Uint8Array), bytes);
+    if (puts === 1) throw new TypeError("fetch failed");
+    return new Response(null, { status: 200 });
+  };
+  assert.equal(
+    await uploadToProvider(
+      new File([bytes], "frame.jpg", { type: "image/jpeg" }),
+      { apiKey: "test:secret", baseUrl: "https://api.example" },
+      fetchImpl,
+    ),
+    "https://cdn.example/frame.jpg",
+  );
+  assert.equal(slots, 1);
+  assert.equal(puts, 2);
+});
+
+test("media transfer retries stop after two attempts and permanent storage rejection is not retried", async () => {
+  let calls = 0;
+  await assert.rejects(
+    fetchTransfer("https://cdn.example/clip.mp4", {}, 1000, async () => {
+      calls++;
+      throw new TypeError("fetch failed");
+    }),
+    /fetch failed/,
+  );
+  assert.equal(calls, 2);
+  calls = 0;
+  const response = await fetchTransfer(
+    "https://storage.example/frame",
+    { method: "PUT", body: "frame" },
+    1000,
+    async () => {
+      calls++;
+      return new Response(null, { status: 403 });
+    },
+  );
+  assert.equal(response.status, 403);
+  assert.equal(calls, 1);
+});
+
+test("upload failures name their stage without returning signed URLs or credentials", async () => {
+  let calls = 0;
+  const fetchImpl: typeof fetch = async () => {
+    calls++;
+    if (calls === 1)
+      return Response.json({
+        upload_url: "https://storage.example/frame?signature=secret",
+        public_url: "https://cdn.example/frame.jpg",
+      });
+    throw new TypeError(
+      "fetch failed at https://storage.example/frame?signature=secret",
+    );
+  };
+  await assert.rejects(
+    uploadToProvider(
+      new File(["frame"], "frame.jpg", { type: "image/jpeg" }),
+      { apiKey: "test:secret", baseUrl: "https://api.example" },
+      fetchImpl,
+    ),
+    (error: RequestGuardError) =>
+      error.status === 502 &&
+      error.message.includes("Higgsfield storage") &&
+      !error.message.includes("secret"),
+  );
+  assert.equal(calls, 3);
+});
 
 test("customer credential cookies encrypt, authenticate, expire and reject legacy plaintext", () => {
   const key = encryptionKey("ab".repeat(32));

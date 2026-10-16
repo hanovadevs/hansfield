@@ -23,7 +23,9 @@ const state = globalThis as typeof globalThis & {
 };
 export function ledgerDatabase() {
   // Runtime customer data is provisioned on the host, never bundled.
-  const directory = path.resolve(/* turbopackIgnore: true */ process.env.JENERA_DATA_DIR || "data");
+  const directory = path.resolve(
+    /* turbopackIgnore: true */ process.env.JENERA_DATA_DIR || "data",
+  );
   const filename = path.join(directory, "usage.sqlite");
   if (state.jeneraLedger?.filename === filename) return state.jeneraLedger.db;
   mkdirSync(directory, { recursive: true });
